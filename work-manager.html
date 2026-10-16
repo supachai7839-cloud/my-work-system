@@ -1,0 +1,2368 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorkSpace Navy Pro — ระบบบริหารจัดการงาน บันทึกการประชุม ปฏิทิน & แผนที่ผู้รับเหมา</title>
+    <!-- Google Fonts: Prompt & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Leaflet Interactive Map CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'Inter', 'sans-serif'],
+                        mono: ['Inter', 'monospace'],
+                    },
+                    colors: {
+                        navy: {
+                            950: '#050B18',
+                            900: '#0A1428',
+                            850: '#0F1E3A',
+                            800: '#16294E',
+                            700: '#1F3A6E',
+                            600: '#2B4F94',
+                            500: '#3B68BE',
+                        }
+                    },
+                    boxShadow: {
+                        'navy-glow': '0 10px 30px -10px rgba(14, 165, 233, 0.2), 0 4px 20px -5px rgba(5, 11, 24, 0.7)',
+                        'white-card': '0 14px 32px -6px rgba(2, 6, 23, 0.45)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050B18;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(29, 78, 216, 0.20) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(14, 165, 233, 0.14) 0px, transparent 45%),
+                radial-gradient(at 50% 100%, rgba(15, 30, 58, 0.35) 0px, transparent 60%);
+            background-attachment: fixed;
+            color: #F8FAFC;
+        }
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0A1428;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1F3A6E;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #38BDF8;
+        }
+        /* Leaflet Custom Styling */
+        .leaflet-container {
+            font-family: 'Prompt', sans-serif !important;
+            border-radius: 1rem;
+            z-index: 10;
+        }
+        .custom-pin {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            background: #0A1428;
+            border: 2.5px solid #38BDF8;
+            border-radius: 9999px 9999px 9999px 0;
+            transform: rotate(-45deg);
+            box-shadow: 0 6px 16px rgba(5, 11, 24, 0.55);
+        }
+        .custom-pin span {
+            transform: rotate(45deg);
+            color: #FFFFFF;
+            font-weight: 700;
+            font-size: 13px;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background: #FFFFFF !important;
+                color: #0F172A !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-sky-500 selection:text-white flex flex-col lg:flex-row">
+
+    <!-- LEFT SIDEBAR NAVIGATION (Dark Navy Modern) -->
+    <aside class="w-full lg:w-72 bg-navy-950/95 border-b lg:border-b-0 lg:border-r border-white/10 lg:min-h-screen flex flex-col justify-between shrink-0 z-30 sticky top-0 lg:static backdrop-blur-xl no-print">
+        <div>
+            <!-- Brand Header -->
+            <div class="p-5 lg:p-6 border-b border-white/10 flex items-center justify-between">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-sky-400 via-blue-600 to-navy-800 p-0.5 shadow-lg shadow-sky-500/20">
+                        <div class="w-full h-full bg-navy-950 rounded-[14px] flex items-center justify-center">
+                            <i data-lucide="briefcase" class="w-5 h-5 text-sky-400"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <h1 class="text-lg font-bold tracking-tight text-white">WorkFlow <span class="text-sky-400">Navy</span></h1>
+                            <span class="px-1.5 py-0.5 text-[10px] font-semibold bg-sky-500/20 text-sky-300 rounded-md border border-sky-400/20">OS</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400">ระบบบริหารงานและฐานข้อมูลผู้รับเหมา</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="p-3 lg:p-4 flex lg:flex-col gap-1.5 overflow-x-auto">
+                <button onclick="switchView('dashboard')" id="nav-dashboard"
+                    class="nav-btn flex items-center gap-3 px-4 py-3 rounded-2xl text-xs sm:text-sm font-semibold transition whitespace-nowrap bg-white text-navy-950 shadow-lg">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 text-blue-700 shrink-0"></i>
+                    <span>แดชบอร์ด & งานของฉัน</span>
+                </button>
+                <button onclick="switchView('meetings')" id="nav-meetings"
+                    class="nav-btn flex items-center gap-3 px-4 py-3 rounded-2xl text-xs sm:text-sm font-semibold transition whitespace-nowrap text-slate-300 hover:bg-navy-850 hover:text-white">
+                    <i data-lucide="file-text" class="w-4 h-4 text-sky-400 shrink-0"></i>
+                    <span>บันทึกการประชุม</span>
+                    <span id="badge-meetings" class="ml-auto px-2 py-0.5 text-[10px] rounded-full bg-white/10 text-slate-200">0</span>
+                </button>
+                <button onclick="switchView('calendar')" id="nav-calendar"
+                    class="nav-btn flex items-center gap-3 px-4 py-3 rounded-2xl text-xs sm:text-sm font-semibold transition whitespace-nowrap text-slate-300 hover:bg-navy-850 hover:text-white">
+                    <i data-lucide="calendar-days" class="w-4 h-4 text-amber-400 shrink-0"></i>
+                    <span>ปฏิทินนัดหมายติดตามงาน</span>
+                    <span id="badge-calendar" class="ml-auto px-2 py-0.5 text-[10px] rounded-full bg-white/10 text-slate-200">0</span>
+                </button>
+                <button onclick="switchView('contractors')" id="nav-contractors"
+                    class="nav-btn flex items-center gap-3 px-4 py-3 rounded-2xl text-xs sm:text-sm font-semibold transition whitespace-nowrap text-slate-300 hover:bg-navy-850 hover:text-white">
+                    <i data-lucide="map-pinned" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+                    <span>แผนที่ & ข้อมูลผู้รับเหมา</span>
+                    <span id="badge-contractors" class="ml-auto px-2 py-0.5 text-[10px] rounded-full bg-white/10 text-slate-200">0</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Bottom Data Backup & Demo Controls -->
+        <div class="hidden lg:flex flex-col gap-2 p-4 border-t border-white/10 text-xs">
+            <button onclick="resetDemoWorkspace()" class="w-full py-2 px-3 rounded-xl bg-navy-850 hover:bg-navy-800 text-slate-200 border border-white/10 flex items-center justify-center gap-2 transition">
+                <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
+                รีเซ็ตข้อมูลตัวอย่าง
+            </button>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="exportWorkspaceJSON()" class="py-2 px-3 rounded-xl bg-navy-900 hover:bg-navy-800 text-sky-300 border border-white/10 flex items-center justify-center gap-1.5 transition">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                    สำรองไฟล์
+                </button>
+                <label class="py-2 px-3 rounded-xl bg-navy-900 hover:bg-navy-800 text-emerald-300 border border-white/10 flex items-center justify-center gap-1.5 cursor-pointer transition">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                    นำเข้าไฟล์
+                    <input type="file" accept=".json" class="hidden" onchange="importWorkspaceJSON(event)">
+                </label>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="flex-1 flex flex-col min-w-0">
+
+        <!-- Top Header Bar -->
+        <header class="h-20 border-b border-white/10 bg-navy-950/75 backdrop-blur-xl px-4 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-20 no-print">
+            <div>
+                <h2 id="currentViewTitle" class="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
+                    แดชบอร์ดภาพรวม & การจัดการงาน
+                </h2>
+                <p id="currentDateDisplay" class="text-xs text-slate-400">วันศุกร์ที่ 16 ตุลาคม 2569</p>
+            </div>
+
+            <!-- Global Search & Quick Actions -->
+            <div class="flex items-center gap-2.5">
+                <div class="relative hidden md:block w-64">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                    <input type="text" id="globalSearchInput" oninput="handleGlobalSearch(this.value)"
+                        placeholder="ค้นหางาน, ประชุม, ผู้รับเหมา..."
+                        class="w-full pl-9 pr-4 py-2 rounded-xl bg-navy-900 border border-white/10 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-sky-400">
+                </div>
+                <button onclick="openCloudSettingsModal()" id="cloudSyncStatusBtn" class="px-3.5 py-2 rounded-xl bg-navy-850 hover:bg-navy-800 text-xs font-semibold text-emerald-300 border border-emerald-400/25 flex items-center gap-1.5 transition" title="ตั้งค่าฐานข้อมูลออนไลน์ Cloudflare">
+                    <span id="cloudStatusDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+                    <i data-lucide="cloud" class="w-4 h-4"></i>
+                    <span id="cloudStatusText" class="hidden sm:inline">เชื่อมต่อ Cloud</span>
+                </button>
+                <button onclick="openLoanAppIfExist()" class="px-3.5 py-2 rounded-xl bg-navy-850 hover:bg-navy-800 text-xs font-medium text-sky-300 border border-sky-400/20 flex items-center gap-1.5 transition" title="เปิดระบบเงินกู้">
+                    <i data-lucide="landmark" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">ระบบกู้ยืมเงิน</span>
+                </button>
+                <button onclick="window.print()" class="px-3.5 py-2 rounded-xl bg-white text-navy-950 hover:bg-slate-100 text-xs font-semibold flex items-center gap-1.5 shadow transition">
+                    <i data-lucide="printer" class="w-4 h-4 text-blue-700"></i>
+                    <span class="hidden sm:inline">พิมพ์รายงาน</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Global Search Results Dropdown -->
+        <div id="globalSearchDropdown" class="hidden mx-4 sm:mx-8 mt-2 p-4 rounded-2xl bg-white text-navy-950 shadow-2xl border border-slate-200 z-40"></div>
+
+        <!-- VIEW CONTAINERS -->
+        <main class="p-4 sm:p-8 space-y-8 flex-1">
+
+            <!-- ========================================== -->
+            <!-- VIEW 1: DASHBOARD & WORK LOG / KANBAN      -->
+            <!-- ========================================== -->
+            <section id="view-dashboard" class="space-y-8">
+                <!-- KPI Cards (Alternating White & Navy) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <!-- White Card 1 -->
+                    <div class="bg-white text-navy-950 rounded-3xl p-5 shadow-white-card border border-slate-100 relative overflow-hidden">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-blue-700">งานที่กำลังดำเนินการ</span>
+                                <h3 id="kpiPendingTasks" class="text-3xl font-bold mt-1.5 font-mono text-navy-950">0</h3>
+                                <p id="kpiCompletedTasks" class="text-xs text-slate-500 mt-2">เสร็จสิ้นแล้ว 0 รายการ</p>
+                            </div>
+                            <div class="w-11 h-11 rounded-2xl bg-navy-900 text-white flex items-center justify-center shadow-md">
+                                <i data-lucide="check-square" class="w-5 h-5 text-sky-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navy Card 2 -->
+                    <div onclick="switchView('meetings')" class="bg-gradient-to-br from-navy-850 to-navy-900 text-white rounded-3xl p-5 shadow-navy-glow border border-white/10 cursor-pointer hover:border-sky-400/50 transition">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-sky-400">บันทึกการประชุมทั้งหมด</span>
+                                <h3 id="kpiTotalMeetings" class="text-3xl font-bold mt-1.5 font-mono text-white">0</h3>
+                                <p id="kpiOpenActionItems" class="text-xs text-slate-300 mt-2">มติที่ต้องติดตาม 0 ข้อ</p>
+                            </div>
+                            <div class="w-11 h-11 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center">
+                                <i data-lucide="users" class="w-5 h-5 text-sky-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- White Card 3 -->
+                    <div onclick="switchView('calendar')" class="bg-white text-navy-950 rounded-3xl p-5 shadow-white-card border border-slate-100 cursor-pointer hover:border-blue-500 transition">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-amber-600">นัดหมายติดตามงานเร็วๆ นี้</span>
+                                <h3 id="kpiUpcomingEvents" class="text-3xl font-bold mt-1.5 font-mono text-navy-950">0</h3>
+                                <p id="kpiNextEventLabel" class="text-xs text-slate-500 mt-2 truncate max-w-[180px]">คลิกเพื่อดูปฏิทิน</p>
+                            </div>
+                            <div class="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md">
+                                <i data-lucide="calendar-clock" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navy Card 4 -->
+                    <div onclick="switchView('contractors')" class="bg-gradient-to-br from-navy-850 to-navy-900 text-white rounded-3xl p-5 shadow-navy-glow border border-white/10 cursor-pointer hover:border-emerald-400/50 transition">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">เครือข่ายผู้รับเหมาบนแผนที่</span>
+                                <h3 id="kpiTotalContractors" class="text-3xl font-bold mt-1.5 font-mono text-white">0</h3>
+                                <p id="kpiActiveSites" class="text-xs text-slate-300 mt-2">พร้อมปักหมุดพิกัด GPS</p>
+                            </div>
+                            <div class="w-11 h-11 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center">
+                                <i data-lucide="map-pin" class="w-5 h-5 text-emerald-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Main Grid: Left (Task & Work Log Manager) | Right (Upcoming Schedule + Quick Scratchpad) -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-7 items-start">
+
+                    <!-- Left 7 Cols: Work Log & Task Tracker (Crisp White Card with Navy Header) -->
+                    <div class="lg:col-span-7 bg-white text-navy-950 rounded-3xl shadow-white-card border border-slate-200 overflow-hidden">
+                        <div class="bg-gradient-to-r from-navy-950 via-navy-900 to-navy-800 px-6 py-5 text-white flex flex-wrap items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-sky-400/20 border border-sky-400/30 flex items-center justify-center text-sky-300">
+                                    <i data-lucide="list-todo" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-base">บันทึกการทำงาน & ติดตามสถานะงาน (Work Log)</h3>
+                                    <p class="text-xs text-slate-300">จัดการรายการงานประจำวัน ตรวจรับงาน และความคืบหน้าโครงการ</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1 bg-navy-950 p-1 rounded-xl border border-white/10 text-xs">
+                                <button onclick="setTaskFilter('all')" id="taskFilter-all" class="px-2.5 py-1 rounded-lg font-semibold bg-white text-navy-950">ทั้งหมด</button>
+                                <button onclick="setTaskFilter('todo')" id="taskFilter-todo" class="px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white">รอดำเนินการ</button>
+                                <button onclick="setTaskFilter('doing')" id="taskFilter-doing" class="px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white">กำลังทำ</button>
+                                <button onclick="setTaskFilter('done')" id="taskFilter-done" class="px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white">เสร็จแล้ว</button>
+                            </div>
+                        </div>
+
+                        <!-- Add Task Form -->
+                        <form onsubmit="handleAddTask(event)" class="p-5 bg-slate-50 border-b border-slate-200 space-y-3">
+                            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                                <div class="sm:col-span-6">
+                                    <input type="text" id="taskTitleInput" required placeholder="ชื่องานที่ต้องทำ เช่น ตรวจงวดงานโครงสร้าง อาคาร B..."
+                                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-medium text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800">
+                                </div>
+                                <div class="sm:col-span-3">
+                                    <input type="text" id="taskProjectInput" placeholder="ชื่อโครงการ / สถานที่"
+                                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800">
+                                </div>
+                                <div class="sm:col-span-3">
+                                    <select id="taskPriorityInput" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800">
+                                        <option value="high">🔥 ด่วนมาก (High)</option>
+                                        <option value="medium" selected>⚡ ปกติ (Medium)</option>
+                                        <option value="low">📌 ทั่วไป (Low)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex items-center gap-2 text-xs text-slate-600">
+                                    <span>กำหนดส่ง:</span>
+                                    <input type="date" id="taskDueInput" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-navy-950">
+                                </div>
+                                <button type="submit" class="px-4 py-2 rounded-xl bg-navy-900 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow">
+                                    <i data-lucide="plus" class="w-4 h-4 text-sky-400"></i>
+                                    เพิ่มรายการงาน
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Task List Container -->
+                        <div id="dashboardTaskList" class="p-5 space-y-3 max-h-[480px] overflow-y-auto"></div>
+                    </div>
+
+                    <!-- Right 5 Cols: Quick Memo Scratchpad + Upcoming Appointments + Recent Contractors -->
+                    <div class="lg:col-span-5 space-y-6">
+
+                        <!-- Quick Scratchpad (Navy Card) -->
+                        <div class="bg-navy-900/95 border border-white/10 rounded-3xl p-5 shadow-navy-glow space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="sticky-note" class="w-4 h-4 text-sky-400"></i>
+                                    <h4 class="font-bold text-sm text-white">สมุดจดบันทึกด่วน (Quick Scratchpad)</h4>
+                                </div>
+                                <span id="scratchpadSavedStatus" class="text-[11px] text-emerald-400">บันทึกอัตโนมัติ</span>
+                            </div>
+                            <textarea id="quickScratchpad" rows="4" oninput="saveScratchpad(this.value)"
+                                placeholder="จดบันทึกช่วยจำด่วน เบอร์ติดต่อหน้างาน รายการสั่งของ หรือไอเดียงาน..."
+                                class="w-full p-3.5 rounded-2xl bg-navy-950 border border-white/10 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-400 leading-relaxed"></textarea>
+                        </div>
+
+                        <!-- Upcoming Follow-ups Preview (Crisp White Card) -->
+                        <div class="bg-white text-navy-950 rounded-3xl p-5 shadow-white-card border border-slate-200 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="bell-ring" class="w-4 h-4 text-amber-500"></i>
+                                    <h4 class="font-bold text-sm text-navy-950">นัดหมายติดตามงานที่กำลังมาถึง</h4>
+                                </div>
+                                <button onclick="switchView('calendar')" class="text-xs font-semibold text-blue-700 hover:underline">ดูปฏิทินทั้งหมด →</button>
+                            </div>
+                            <div id="dashboardUpcomingList" class="space-y-2.5"></div>
+                        </div>
+
+                        <!-- Pinned Contractors Quick View (Navy Card) -->
+                        <div class="bg-navy-900/95 border border-white/10 rounded-3xl p-5 shadow-navy-glow space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="hard-hat" class="w-4 h-4 text-emerald-400"></i>
+                                    <h4 class="font-bold text-sm text-white">รายชื่อผู้รับเหมาล่าสุด</h4>
+                                </div>
+                                <button onclick="switchView('contractors')" class="text-xs font-semibold text-sky-400 hover:underline">เปิดแผนที่ →</button>
+                            </div>
+                            <div id="dashboardContractorList" class="space-y-2.5"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- VIEW 2: MEETING MINUTES & ACTION ITEMS     -->
+            <!-- ========================================== -->
+            <section id="view-meetings" class="hidden space-y-7">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-7 items-start">
+
+                    <!-- Left 5 Cols: Meeting Form (Crisp White Card with Navy Header) -->
+                    <div class="lg:col-span-5 bg-white text-navy-950 rounded-3xl shadow-white-card border border-slate-200 overflow-hidden">
+                        <div class="bg-gradient-to-r from-navy-950 via-navy-900 to-navy-800 px-6 py-5 text-white flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-sky-400/20 border border-sky-400/30 flex items-center justify-center text-sky-300">
+                                    <i data-lucide="notebook-pen" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h3 id="meetingFormTitle" class="font-bold text-base">บันทึกการประชุมใหม่</h3>
+                                    <p class="text-xs text-slate-300">บันทึกวาระ สรุปมติที่ประชุม และรายการสั่งงาน</p>
+                                </div>
+                            </div>
+                            <button type="button" id="cancelMeetingEditBtn" onclick="resetMeetingForm()" class="hidden px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs text-white">
+                                ยกเลิกแก้ไข
+                            </button>
+                        </div>
+
+                        <form id="meetingForm" onsubmit="handleSaveMeeting(event)" class="p-6 space-y-4">
+                            <input type="hidden" id="editingMeetingId" value="">
+
+                            <div>
+                                <label class="block text-xs font-bold text-navy-900 mb-1">หัวข้อการประชุม <span class="text-rose-500">*</span></label>
+                                <input type="text" id="meetingSubject" required placeholder="เช่น ประชุมติดตามความคืบหน้างานก่อสร้างสัปดาห์ที่ 6"
+                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-sm font-medium text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-navy-900 mb-1">วันที่ประชุม <span class="text-rose-500">*</span></label>
+                                    <input type="date" id="meetingDate" required
+                                        class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-navy-900 mb-1">เวลา</label>
+                                    <input type="time" id="meetingTime" value="10:00"
+                                        class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-navy-900 mb-1">โครงการ / สถานที่ / ห้องประชุม</label>
+                                    <input type="text" id="meetingLocation" placeholder="เช่น ห้องประชุมใหญ่ / ไซต์งานบางนา"
+                                        class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-navy-900 mb-1">ผู้เข้าร่วมประชุม (คั่นด้วย ,)</label>
+                                    <input type="text" id="meetingAttendees" placeholder="เช่น คุณสมชาย, ช่างเอก, วิศวกรนนท์"
+                                        class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-navy-900 mb-1">รายละเอียดและมติที่ประชุม <span class="text-rose-500">*</span></label>
+                                <textarea id="meetingSummary" rows="4" required placeholder="สรุปสาระสำคัญ ปัญหาที่พบ และข้อตกลงร่วมกัน..."
+                                    class="w-full p-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs sm:text-sm text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800"></textarea>
+                            </div>
+
+                            <!-- Action Items Builder inside Navy Box -->
+                            <div class="p-4 rounded-2xl bg-navy-950 text-white space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold text-sky-300 flex items-center gap-1.5">
+                                        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                                        มติสั่งการ / งานที่ต้องติดตามต่อ (Action Items)
+                                    </span>
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="text" id="newActionItemInput" placeholder="พิมพ์งานที่ต้องติดตาม แล้วกด + เพิ่ม"
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();addDraftActionItem();}"
+                                        class="flex-1 px-3 py-2 rounded-xl bg-navy-900 border border-white/15 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-sky-400">
+                                    <button type="button" onclick="addDraftActionItem()" class="px-3 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-navy-950 font-bold text-xs transition">
+                                        + เพิ่ม
+                                    </button>
+                                </div>
+                                <ul id="draftActionItemsList" class="space-y-1.5 text-xs"></ul>
+                            </div>
+
+                            <button type="submit" class="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-navy-950 via-navy-850 to-blue-800 hover:from-navy-900 hover:to-blue-700 text-white font-semibold text-sm shadow-lg transition flex items-center justify-center gap-2">
+                                <i data-lucide="save" class="w-4 h-4 text-sky-400"></i>
+                                <span id="meetingSubmitBtnText">บันทึกรายงานการประชุม</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Right 7 Cols: Saved Meeting Minutes List -->
+                    <div class="lg:col-span-7 space-y-4">
+                        <div class="bg-navy-900/90 border border-white/10 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                    <i data-lucide="folder-kanban" class="w-5 h-5 text-sky-400"></i>
+                                    คลังบันทึกการประชุมทั้งหมด
+                                </h3>
+                                <p class="text-xs text-slate-400">คลิกติ๊กถูกที่มติที่ประชุมเพื่ออัปเดตความคืบหน้า หรือส่งเข้ารายการงานได้ทันที</p>
+                            </div>
+                            <div class="relative w-full sm:w-64">
+                                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                                <input type="text" id="meetingSearchInput" oninput="renderMeetingsList()" placeholder="ค้นหาหัวข้อประชุม, ผู้เข้าร่วม..."
+                                    class="w-full pl-9 pr-3.5 py-2 rounded-xl bg-navy-950 border border-white/10 text-xs text-white focus:outline-none focus:border-sky-400">
+                            </div>
+                        </div>
+
+                        <div id="meetingsListContainer" class="space-y-4"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- VIEW 3: CALENDAR & FOLLOW-UP APPOINTMENTS  -->
+            <!-- ========================================== -->
+            <section id="view-calendar" class="hidden space-y-7">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-7 items-start">
+
+                    <!-- Left 8 Cols: Interactive Monthly Calendar Grid (Crisp White Card with Navy Header) -->
+                    <div class="lg:col-span-8 bg-white text-navy-950 rounded-3xl shadow-white-card border border-slate-200 overflow-hidden">
+                        <div class="bg-gradient-to-r from-navy-950 via-navy-900 to-navy-800 px-6 py-5 text-white flex flex-wrap items-center justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
+                                    <i data-lucide="calendar" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h3 id="calendarMonthYearLabel" class="text-lg font-bold text-white">ตุลาคม 2569</h3>
+                                    <p class="text-xs text-slate-300">คลิกที่วันที่บนปฏิทินเพื่อดูหรือเพิ่มนัดหมายติดตามงาน</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="changeCalendarMonth(-1)" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition">
+                                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="goToTodayCalendar()" class="px-3 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-navy-950 font-bold text-xs transition">
+                                    วันนี้
+                                </button>
+                                <button onclick="changeCalendarMonth(1)" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition">
+                                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Days of Week Header -->
+                        <div class="grid grid-cols-7 bg-navy-900 text-sky-300 text-center py-2.5 text-xs font-bold border-b border-slate-200">
+                            <div>อา.</div>
+                            <div>จ.</div>
+                            <div>อ.</div>
+                            <div>พ.</div>
+                            <div>พฤ.</div>
+                            <div>ศ.</div>
+                            <div>ส.</div>
+                        </div>
+
+                        <!-- Calendar Cells Grid -->
+                        <div id="calendarGrid" class="grid grid-cols-7 divide-x divide-y divide-slate-200 bg-slate-100"></div>
+                    </div>
+
+                    <!-- Right 4 Cols: Selected Date Appointments & Add Appointment Form -->
+                    <div class="lg:col-span-4 space-y-6">
+
+                        <!-- Add Appointment Form (Navy Card) -->
+                        <div class="bg-navy-900 border border-white/10 rounded-3xl p-6 shadow-navy-glow space-y-4">
+                            <div class="flex items-center gap-2.5 border-b border-white/10 pb-3">
+                                <i data-lucide="calendar-plus" class="w-5 h-5 text-sky-400"></i>
+                                <div>
+                                    <h4 class="font-bold text-sm text-white">สร้างนัดหมายติดตามงาน</h4>
+                                    <p id="selectedDateLabel" class="text-xs text-sky-300">วันที่เลือก: วันนี้</p>
+                                </div>
+                            </div>
+
+                            <form onsubmit="handleAddAppointment(event)" class="space-y-3.5">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">หัวข้อนัดหมาย / งานที่ติดตาม <span class="text-rose-400">*</span></label>
+                                    <input type="text" id="apptTitleInput" required placeholder="เช่น นัดตรวจรับงานไฟฟ้างวดที่ 2"
+                                        class="w-full px-3.5 py-2.5 rounded-xl bg-navy-950 border border-white/15 text-xs sm:text-sm text-white focus:outline-none focus:border-sky-400">
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2.5">
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-300 mb-1">วันที่นัดหมาย</label>
+                                        <input type="date" id="apptDateInput" required onchange="selectCalendarDate(this.value)"
+                                            class="w-full px-3 py-2 rounded-xl bg-navy-950 border border-white/15 text-xs text-white focus:outline-none focus:border-sky-400">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-300 mb-1">เวลา</label>
+                                        <input type="time" id="apptTimeInput" value="09:30"
+                                            class="w-full px-3 py-2 rounded-xl bg-navy-950 border border-white/15 text-xs text-white focus:outline-none focus:border-sky-400">
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2.5">
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-300 mb-1">หมวดหมู่นัดหมาย</label>
+                                        <select id="apptTypeSelect" class="w-full px-3 py-2 rounded-xl bg-navy-950 border border-white/15 text-xs text-white focus:outline-none focus:border-sky-400">
+                                            <option value="inspection">🔍 ตรวจหน้างาน</option>
+                                            <option value="followup">📌 ติดตามงานผู้รับเหมา</option>
+                                            <option value="payment">💰 นัดจ่ายเงิน/เบิกงวด</option>
+                                            <option value="meeting">👥 ประชุมนัดหมาย</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-300 mb-1">ผู้รับเหมาที่เกี่ยวข้อง</label>
+                                        <select id="apptContractorSelect" class="w-full px-3 py-2 rounded-xl bg-navy-950 border border-white/15 text-xs text-white focus:outline-none focus:border-sky-400">
+                                            <option value="">-- ไม่ระบุ --</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">สถานที่ / หมายเหตุ</label>
+                                    <input type="text" id="apptNoteInput" placeholder="รายละเอียดเพิ่มเติม หรือสิ่งที่ต้องเตรียม..."
+                                        class="w-full px-3.5 py-2 rounded-xl bg-navy-950 border border-white/15 text-xs text-white focus:outline-none focus:border-sky-400">
+                                </div>
+
+                                <button type="submit" class="w-full py-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-navy-950 font-bold text-xs sm:text-sm transition shadow-lg">
+                                    + บันทึกนัดหมายลงปฏิทิน
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Appointments on Selected Date (Crisp White Card) -->
+                        <div class="bg-white text-navy-950 rounded-3xl p-5 shadow-white-card border border-slate-200 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h4 id="dayScheduleHeader" class="font-bold text-sm text-navy-950">รายการนัดหมายในวันที่เลือก</h4>
+                                <span id="dayScheduleCount" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-navy-900 text-white">0 รายการ</span>
+                            </div>
+                            <div id="selectedDateAppointmentsList" class="space-y-2.5 max-h-80 overflow-y-auto"></div>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- VIEW 4: CONTRACTOR MAP & DIRECTORY         -->
+            <!-- ========================================== -->
+            <section id="view-contractors" class="hidden space-y-7">
+
+                <!-- Top Interactive Map + Form Split -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-7 items-start">
+
+                    <!-- Left 7 Cols: Interactive Google Maps Card (Crisp White & Navy Header) -->
+                    <div class="lg:col-span-7 bg-white text-navy-950 rounded-3xl shadow-white-card border border-slate-200 overflow-hidden">
+                        <div class="bg-gradient-to-r from-navy-950 via-navy-900 to-navy-800 px-6 py-4 text-white flex flex-wrap items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-emerald-400/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300">
+                                    <i data-lucide="map-pinned" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-base">Google Maps พิกัดผู้รับเหมาและหน้างานจริง</h3>
+                                    <p class="text-xs text-slate-300">รองรับแผนที่ Google Maps (ถนน / ดาวเทียม) คลิกปักหมุดพิกัด หรือสลับโหมด Google Embed</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <button type="button" onclick="locateMyCurrentPosition()" class="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-navy-950 font-bold text-xs flex items-center gap-1.5 transition">
+                                    <i data-lucide="locate-fixed" class="w-3.5 h-3.5"></i>
+                                    พิกัดของฉัน
+                                </button>
+                                <button type="button" onclick="fitAllContractorMarkers()" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition">
+                                    ดูทุกหมุด
+                                </button>
+                                <a id="openInGoogleMapsExternal" href="https://www.google.com/maps?q=13.7563,100.5018" target="_blank"
+                                    class="px-3 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-400/30 text-xs font-semibold transition flex items-center gap-1">
+                                    เปิดแอพ Google Maps ↗
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Google Maps Layer Switcher & Place Search Bar -->
+                        <div class="p-3.5 bg-slate-100 border-b border-slate-200 space-y-2.5">
+                            <div class="flex gap-2">
+                                <div class="relative flex-1">
+                                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                                    <input type="text" id="mapPlaceSearchInput" placeholder="ค้นหาสถานที่บน Google Maps เช่น บางนา, นนทบุรี, พระราม 2..."
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();searchPlaceOnMap();}"
+                                        class="w-full pl-9 pr-4 py-2 rounded-xl bg-white border border-slate-300 text-xs sm:text-sm text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800">
+                                </div>
+                                <button type="button" onclick="searchPlaceOnMap()" class="px-4 py-2 rounded-xl bg-navy-900 hover:bg-blue-700 text-white text-xs font-semibold transition">
+                                    ค้นหาบนแผนที่
+                                </button>
+                            </div>
+
+                            <!-- Map Mode & Google Layer Selector -->
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-[11px] font-semibold">
+                                    <button type="button" id="gmapLayer-m" onclick="setGoogleMapLayer('m')" class="px-2.5 py-1 rounded-lg bg-navy-900 text-white transition">
+                                        🗺️ Google แผนที่ถนน
+                                    </button>
+                                    <button type="button" id="gmapLayer-y" onclick="setGoogleMapLayer('y')" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-navy-950 transition">
+                                        🛰️ Google ดาวเทียม+ชื่อถนน
+                                    </button>
+                                    <button type="button" id="gmapLayer-p" onclick="setGoogleMapLayer('p')" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-navy-950 transition">
+                                        ⛰️ ภูมิประเทศ
+                                    </button>
+                                    <button type="button" id="gmapLayer-embed" onclick="setGoogleMapLayer('embed')" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-navy-950 transition">
+                                        📍 Google Maps Embed
+                                    </button>
+                                </div>
+                                <span class="text-[11px] text-slate-500">วางลิงก์ Google Maps หรือคลิกบนแผนที่ได้ทันที</span>
+                            </div>
+                        </div>
+
+                        <!-- Google Map Interactive Container & Google Maps Official Iframe Container -->
+                        <div class="p-3 bg-white">
+                            <div id="contractorMap" class="w-full h-[430px] rounded-2xl border border-slate-200 shadow-inner"></div>
+                            <iframe id="googleMapEmbedIframe"
+                                class="hidden w-full h-[430px] rounded-2xl border border-slate-200 shadow-inner"
+                                src="https://maps.google.com/maps?q=13.7563,100.5018&hl=th&z=15&output=embed"
+                                loading="lazy"
+                                referrerpolicy="no-referrer-when-downgrade">
+                            </iframe>
+                        </div>
+
+                        <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+                            <span class="flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-sky-500 inline-block"></span>
+                                คลิกที่จุดใดก็ได้บนแผนที่ Google Maps เพื่อดึงค่า <strong>ละติจูด / ลองจิจูด</strong> ลงในฟอร์มอัตโนมัติ
+                            </span>
+                            <span id="pickedCoordBadge" class="font-mono font-bold text-navy-900">13.7563, 100.5018</span>
+                        </div>
+                    </div>
+
+                    <!-- Right 5 Cols: Add/Edit Contractor Form (Crisp White Card with Navy Accents) -->
+                    <div class="lg:col-span-5 bg-white text-navy-950 rounded-3xl shadow-white-card border border-slate-200 overflow-hidden">
+                        <div class="bg-gradient-to-r from-navy-950 via-navy-900 to-navy-800 px-6 py-4 text-white flex items-center justify-between">
+                            <div>
+                                <h3 id="contractorFormTitle" class="font-bold text-base">บันทึกข้อมูลและตำแหน่งผู้รับเหมา</h3>
+                                <p class="text-xs text-slate-300">เก็บข้อมูลติดต่อ ความเชี่ยวชาญ ที่อยู่ และพิกัดหน้างาน</p>
+                            </div>
+                            <button type="button" id="cancelContractorEditBtn" onclick="resetContractorForm()" class="hidden px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs text-white">
+                                ยกเลิกแก้ไข
+                            </button>
+                        </div>
+
+                        <form id="contractorForm" onsubmit="handleSaveContractor(event)" class="p-5 space-y-3.5">
+                            <input type="hidden" id="editingContractorId" value="">
+
+                            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                                <div class="sm:col-span-7">
+                                    <label class="block text-xs font-bold text-navy-900 mb-1">ชื่อผู้รับเหมา / บริษัท / หัวหน้าชุด <span class="text-rose-500">*</span></label>
+                                    <input type="text" id="contractorName" required placeholder="เช่น ช่างพงษ์ โครงสร้างเหล็ก"
+                                        class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs sm:text-sm font-medium text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800">
+                                </div>
+                                <div class="sm:col-span-5">
+                                    <label class="block text-xs font-bold text-navy-900 mb-1">หมวดงานความเชี่ยวชาญ</label>
+                                    <select id="contractorTrade" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800">
+                                        <option value="งานโครงสร้าง/โยธา">🏗️ งานโครงสร้าง / โยธา</option>
+                                        <option value="งานระบบไฟฟ้า/สื่อสาร">⚡ งานระบบไฟฟ้า / สื่อสาร</option>
+                                        <option value="งานประปา/สุขาภิบาล">🚰 งานประปา / สุขาภิบาล</option>
+                                        <option value="งานสถาปัตย์/ตกแต่งภายใน">🎨 งานสถาปัตย์ / ตกแต่งภายใน</option>
+                                        <option value="งานหลังคา/โครงเหล็ก">🔩 งานหลังคา / โครงเหล็ก</option>
+                                        <option value="งานแอร์/ระบายอากาศ">❄️ งานแอร์ / ระบายอากาศ</option>
+                                        <option value="ผู้รับเหมาทั่วไป">🛠️ ผู้รับเหมาทั่วไป</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-navy-900 mb-1">เบอร์โทรศัพท์ติดต่อ <span class="text-rose-500">*</span></label>
+                                    <input type="tel" id="contractorPhone" required placeholder="08X-XXX-XXXX"
+                                        class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs sm:text-sm font-medium text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-navy-900 mb-1">LINE ID / ช่องทางติดต่อ</label>
+                                    <input type="text" id="contractorLine" placeholder="@lineid หรือเบอร์ไลน์"
+                                        class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs sm:text-sm font-medium text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-navy-900 mb-1">ที่อยู่ผู้รับเหมา / สถานที่ตั้งแคมป์หรือหน้างาน <span class="text-rose-500">*</span></label>
+                                <textarea id="contractorAddress" rows="2" required placeholder="ระบุบ้านเลขที่ ถนน ตำบล อำเภอ จังหวัด หรือจุดสังเกตหน้างาน..."
+                                    class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800"></textarea>
+                            </div>
+
+                            <!-- GPS Coordinates Box in Navy -->
+                            <div class="p-3.5 rounded-2xl bg-navy-950 text-white space-y-2.5">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[11px] font-bold text-sky-300 flex items-center gap-1.5">
+                                        <i data-lucide="compass" class="w-3.5 h-3.5"></i>
+                                        พิกัด GPS (คลิกเลือกบนแผนที่ด้านซ้ายได้ทันที)
+                                    </span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2.5">
+                                    <div>
+                                        <label class="block text-[10px] text-slate-400">ละติจูด (Latitude)</label>
+                                        <input type="number" step="any" id="contractorLat" required value="13.7563" oninput="updateDraftMarkerFromInputs()"
+                                            class="w-full px-2.5 py-1.5 rounded-lg bg-navy-900 border border-white/15 font-mono text-xs text-white">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] text-slate-400">ลองจิจูด (Longitude)</label>
+                                        <input type="number" step="any" id="contractorLng" required value="100.5018" oninput="updateDraftMarkerFromInputs()"
+                                            class="w-full px-2.5 py-1.5 rounded-lg bg-navy-900 border border-white/15 font-mono text-xs text-white">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-navy-900 mb-1">งบประมาณ/มูลค่าสัญญา (บาท)</label>
+                                    <input type="number" step="any" id="contractorBudget" placeholder="เช่น 250000"
+                                        class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono font-bold text-navy-950">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-navy-900 mb-1">คะแนนประเมินผลงาน</label>
+                                    <select id="contractorRating" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-navy-950">
+                                        <option value="5">⭐⭐⭐⭐⭐ (5/5 ดีเยี่ยม)</option>
+                                        <option value="4" selected>⭐⭐⭐⭐ (4/5 ดีมาก)</option>
+                                        <option value="3">⭐⭐⭐ (3/5 ปานกลาง)</option>
+                                        <option value="2">⭐⭐ (2/5 ต้องปรับปรุง)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-navy-900 mb-1">รายละเอียดงาน / ประวัติผลงาน / เงื่อนไขการเบิกงวด</label>
+                                <input type="text" id="contractorNotes" placeholder="เช่น รับเหมาค่าแรง + ของ, ประกันผลงาน 1 ปี..."
+                                    class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs text-navy-950">
+                            </div>
+
+                            <button type="submit" class="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-navy-950 via-navy-850 to-blue-800 hover:from-navy-900 hover:to-blue-700 text-white font-semibold text-sm shadow-lg transition flex items-center justify-center gap-2">
+                                <i data-lucide="map-pin-check" class="w-4 h-4 text-emerald-400"></i>
+                                <span id="contractorSubmitBtnText">บันทึกข้อมูลและปักหมุดผู้รับเหมา</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Contractor Directory Cards (Alternating Navy & White Cards) -->
+                <div class="space-y-4">
+                    <div class="bg-navy-900/90 border border-white/10 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                <i data-lucide="contact-round" class="w-5 h-5 text-emerald-400"></i>
+                                ทะเบียนรายชื่อและพิกัดผู้รับเหมาทั้งหมด
+                            </h3>
+                            <p class="text-xs text-slate-400">กด "ดูบนแผนที่" เพื่อซูมไปยังตำแหน่งผู้รับเหมา หรือกด "นำทาง Google Maps" เพื่อเดินทางไปยังหน้างาน</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="contractorSearchInput" oninput="renderContractorsList()" placeholder="ค้นหาชื่อช่าง, หมวดงาน, ที่อยู่..."
+                                class="w-full sm:w-64 px-3.5 py-2 rounded-xl bg-navy-950 border border-white/10 text-xs text-white focus:outline-none focus:border-sky-400">
+                        </div>
+                    </div>
+
+                    <div id="contractorsGridContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- MODAL: Supabase Online Database Sync Settings -->
+    <div id="cloudSettingsModal" class="fixed inset-0 z-50 hidden bg-navy-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto no-print">
+        <div class="bg-white text-navy-950 w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-navy-950 via-navy-900 to-navy-800 px-6 py-5 text-white flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-emerald-400/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300">
+                        <i data-lucide="database" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base">เชื่อมต่อฐานข้อมูลออนไลน์ (Supabase Sync)</h3>
+                        <p class="text-xs text-slate-300">ซิงค์ข้อมูลอัตโนมัติเพื่อเปิดดูและแก้ไขได้ทุกเครื่อง (PC / มือถือ / แท็บเล็ต)</p>
+                    </div>
+                </div>
+                <button onclick="closeCloudSettingsModal()" class="w-8 h-8 rounded-xl bg-white/10 hover:bg-rose-500/80 text-white flex items-center justify-center transition">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleSaveCloudConfig(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-navy-900 mb-1">1. Supabase Project URL <span class="text-rose-500">*</span></label>
+                    <input type="url" id="supabaseUrlInput" placeholder="เช่น https://abcdefghijklm.supabase.co"
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs sm:text-sm font-mono text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-navy-900 mb-1">2. Supabase Anon Public Key <span class="text-rose-500">*</span></label>
+                    <input type="password" id="supabaseKeyInput" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs sm:text-sm font-mono text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-navy-900 mb-1">3. รหัสห้องข้อมูลของคุณ (Workspace ID)</label>
+                    <input type="text" id="supabaseDocIdInput" value="main_workspace" placeholder="เช่น main_workspace หรือชื่อเฉพาะของคุณ"
+                        class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs font-mono text-navy-950 focus:outline-none focus:ring-2 focus:ring-navy-800">
+                    <p class="text-[11px] text-slate-500 mt-1">ใช้รหัสเดียวกันนี้ในทุกเครื่องเพื่อดึงข้อมูลชุดเดียวกัน</p>
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-between gap-2 text-xs">
+                    <div>
+                        <span class="font-bold text-navy-950 block">สถานะการเชื่อมต่อปัจจุบัน:</span>
+                        <span id="modalCloudStatusText" class="text-slate-600">โหมดออฟไลน์ (บันทึกในเครื่อง LocalStorage)</span>
+                    </div>
+                    <button type="button" onclick="syncFromCloudNow()" class="px-3 py-2 rounded-xl bg-navy-900 hover:bg-blue-700 text-white font-semibold text-xs transition shrink-0">
+                        ดึงข้อมูลจาก Supabase ทันที
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeCloudSettingsModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-navy-900 text-xs font-semibold">
+                        ปิดหน้าต่าง
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg transition">
+                        บันทึกและเชื่อมต่อ Supabase
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        // ============================================================================
+        // STATE & SUPABASE ONLINE SYNC MANAGEMENT
+        // ============================================================================
+        const WORKSPACE_STORAGE_KEY = 'workflow_navy_pro_v1';
+        const SUPABASE_CONFIG_KEY = 'workflow_navy_supabase_config';
+
+        let cloudConfig = {
+            supabaseUrl: '',
+            supabaseKey: '',
+            docId: 'main_workspace'
+        };
+
+        let state = {
+            tasks: [],
+            meetings: [],
+            appointments: [],
+            contractors: [],
+            scratchpad: ''
+        };
+
+        let currentView = 'dashboard';
+        let currentTaskFilter = 'all';
+        let draftActionItems = [];
+
+        // Calendar State
+        let calCurrentYear = new Date().getFullYear();
+        let calCurrentMonth = new Date().getMonth();
+        let selectedCalendarDate = new Date().toISOString().split('T')[0];
+
+        // Google Map State
+        let mapInstance = null;
+        let draftMarker = null;
+        let contractorMarkersLayer = null;
+
+        // ============================================================================
+        // INITIALIZATION
+        // ============================================================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            const todayIso = new Date().toISOString().split('T')[0];
+            document.getElementById('currentDateDisplay').textContent = new Date().toLocaleDateString('th-TH', {
+                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+            });
+            document.getElementById('taskDueInput').value = todayIso;
+            document.getElementById('meetingDate').value = todayIso;
+            document.getElementById('apptDateInput').value = todayIso;
+
+            loadCloudConfig();
+            loadWorkspaceState();
+            renderAllViews();
+            lucide.createIcons();
+
+            // Automatically fetch latest data from Supabase if configured
+            if (cloudConfig.supabaseUrl && cloudConfig.supabaseKey) {
+                await syncFromCloudNow(true);
+            }
+        });
+
+        function loadCloudConfig() {
+            const saved = localStorage.getItem(SUPABASE_CONFIG_KEY);
+            if (saved) {
+                try {
+                    cloudConfig = { ...cloudConfig, ...JSON.parse(saved) };
+                } catch (e) {}
+            }
+            updateCloudStatusUI();
+        }
+
+        function updateCloudStatusUI(status = 'idle') {
+            const dot = document.getElementById('cloudStatusDot');
+            const text = document.getElementById('cloudStatusText');
+            const modalText = document.getElementById('modalCloudStatusText');
+
+            if (!cloudConfig.supabaseUrl || !cloudConfig.supabaseKey) {
+                if (dot) dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+                if (text) text.textContent = 'เชื่อมต่อ Supabase';
+                if (modalText) modalText.textContent = 'โหมดออฟไลน์ (บันทึกในเครื่อง LocalStorage)';
+                return;
+            }
+
+            if (status === 'syncing') {
+                if (dot) dot.className = 'w-2 h-2 rounded-full bg-sky-400 animate-ping';
+                if (text) text.textContent = 'กำลังซิงค์...';
+            } else if (status === 'error') {
+                if (dot) dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+                if (text) text.textContent = 'ซิงค์ขัดข้อง';
+                if (modalText) modalText.textContent = 'ไม่สามารถเชื่อมต่อ Supabase ได้ กรุณาตรวจสอบ URL / Key หรือสร้างตาราง app_state';
+            } else {
+                if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+                if (text) text.textContent = 'Supabase ออนไลน์';
+                if (modalText) modalText.textContent = `เชื่อมต่อกับ Supabase (${cloudConfig.docId}) เรียบร้อยแล้ว`;
+            }
+        }
+
+        function openCloudSettingsModal() {
+            document.getElementById('supabaseUrlInput').value = cloudConfig.supabaseUrl || '';
+            document.getElementById('supabaseKeyInput').value = cloudConfig.supabaseKey || '';
+            document.getElementById('supabaseDocIdInput').value = cloudConfig.docId || 'main_workspace';
+            updateCloudStatusUI();
+            document.getElementById('cloudSettingsModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeCloudSettingsModal() {
+            document.getElementById('cloudSettingsModal').classList.add('hidden');
+        }
+
+        async function handleSaveCloudConfig(e) {
+            e.preventDefault();
+            cloudConfig.supabaseUrl = document.getElementById('supabaseUrlInput').value.trim().replace(/\/+$/, '');
+            cloudConfig.supabaseKey = document.getElementById('supabaseKeyInput').value.trim();
+            cloudConfig.docId = document.getElementById('supabaseDocIdInput').value.trim() || 'main_workspace';
+            localStorage.setItem(SUPABASE_CONFIG_KEY, JSON.stringify(cloudConfig));
+            updateCloudStatusUI();
+
+            if (cloudConfig.supabaseUrl && cloudConfig.supabaseKey) {
+                await syncFromCloudNow(false);
+            } else {
+                showToast('เปลี่ยนเป็นโหมดบันทึกในเครื่อง (Offline) แล้ว');
+            }
+            closeCloudSettingsModal();
+        }
+
+        async function syncFromCloudNow(silent = false) {
+            if (!cloudConfig.supabaseUrl || !cloudConfig.supabaseKey) {
+                if (!silent) showToast('กรุณากรอก Supabase URL และ Anon Key ก่อน', 'error');
+                return;
+            }
+            try {
+                updateCloudStatusUI('syncing');
+                const docId = encodeURIComponent(cloudConfig.docId || 'main_workspace');
+                const endpoint = `${cloudConfig.supabaseUrl}/rest/v1/app_state?id=eq.${docId}&select=payload`;
+                const res = await fetch(endpoint, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': cloudConfig.supabaseKey,
+                        'Authorization': `Bearer ${cloudConfig.supabaseKey}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const rows = await res.json();
+
+                if (Array.isArray(rows) && rows.length > 0 && rows[0].payload && Array.isArray(rows[0].payload.tasks)) {
+                    state = rows[0].payload;
+                    localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(state));
+                    document.getElementById('quickScratchpad').value = state.scratchpad || '';
+                    renderAllViews();
+                    updateCloudStatusUI('online');
+                    if (!silent) showToast('ดึงข้อมูลล่าสุดจาก Supabase สำเร็จ!');
+                } else {
+                    // If row doesn't exist yet on Supabase, push current state to create it
+                    await pushToCloudNow();
+                    updateCloudStatusUI('online');
+                    if (!silent) showToast('เชื่อมต่อและอัปโหลดข้อมูลเริ่มต้นขึ้น Supabase สำเร็จ!');
+                }
+            } catch (err) {
+                updateCloudStatusUI('error');
+                if (!silent) showToast('เชื่อมต่อ Supabase ไม่สำเร็จ กรุณาตรวจสอบ URL, Key และตาราง app_state', 'error');
+            }
+        }
+
+        async function pushToCloudNow() {
+            if (!cloudConfig.supabaseUrl || !cloudConfig.supabaseKey) return;
+            try {
+                updateCloudStatusUI('syncing');
+                const endpoint = `${cloudConfig.supabaseUrl}/rest/v1/app_state`;
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': cloudConfig.supabaseKey,
+                        'Authorization': `Bearer ${cloudConfig.supabaseKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                    },
+                    body: JSON.stringify({
+                        id: cloudConfig.docId || 'main_workspace',
+                        payload: state,
+                        updated_at: new Date().toISOString()
+                    })
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                updateCloudStatusUI('online');
+            } catch (err) {
+                updateCloudStatusUI('error');
+            }
+        }
+
+        function loadWorkspaceState() {
+            const raw = localStorage.getItem(WORKSPACE_STORAGE_KEY);
+            if (raw) {
+                try {
+                    state = JSON.parse(raw);
+                } catch (e) {
+                    seedInitialWorkspaceData(false);
+                }
+            } else {
+                seedInitialWorkspaceData(false);
+            }
+            document.getElementById('quickScratchpad').value = state.scratchpad || '';
+        }
+
+        function saveWorkspaceState() {
+            localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(state));
+            updateSidebarBadges();
+            if (cloudConfig.supabaseUrl && cloudConfig.supabaseKey) {
+                pushToCloudNow();
+            }
+        }
+
+        function updateSidebarBadges() {
+            document.getElementById('badge-meetings').textContent = state.meetings.length;
+            document.getElementById('badge-calendar').textContent = state.appointments.length;
+            document.getElementById('badge-contractors').textContent = state.contractors.length;
+        }
+
+        function formatThaiDate(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function formatCurrency(val) {
+            const num = Number(val) || 0;
+            return '฿' + num.toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        }
+
+        // ============================================================================
+        // NAVIGATION SWITCHER
+        // ============================================================================
+        function switchView(viewName) {
+            currentView = viewName;
+            const views = ['dashboard', 'meetings', 'calendar', 'contractors'];
+            const titles = {
+                dashboard: 'แดชบอร์ดภาพรวม & บันทึกการทำงาน',
+                meetings: 'ระบบบันทึกการประชุม & ติดตามมติสั่งการ',
+                calendar: 'ปฏิทินนัดหมาย & ตารางติดตามงาน',
+                contractors: 'แผนที่พิกัด GPS & ทะเบียนผู้รับเหมา'
+            };
+
+            views.forEach(v => {
+                const section = document.getElementById(`view-${v}`);
+                const navBtn = document.getElementById(`nav-${v}`);
+                if (v === viewName) {
+                    section.classList.remove('hidden');
+                    navBtn.className = 'nav-btn flex items-center gap-3 px-4 py-3 rounded-2xl text-xs sm:text-sm font-semibold transition whitespace-nowrap bg-white text-navy-950 shadow-lg';
+                } else {
+                    section.classList.add('hidden');
+                    navBtn.className = 'nav-btn flex items-center gap-3 px-4 py-3 rounded-2xl text-xs sm:text-sm font-semibold transition whitespace-nowrap text-slate-300 hover:bg-navy-850 hover:text-white';
+                }
+            });
+
+            document.getElementById('currentViewTitle').textContent = titles[viewName] || '';
+
+            if (viewName === 'contractors') {
+                setTimeout(() => {
+                    initContractorMap();
+                    mapInstance.invalidateSize();
+                    renderContractorMarkersOnMap();
+                }, 100);
+            }
+
+            renderAllViews();
+            lucide.createIcons();
+        }
+
+        function renderAllViews() {
+            updateSidebarBadges();
+            renderDashboard();
+            renderMeetingsList();
+            renderCalendar();
+            populateContractorDropdown();
+            renderContractorsList();
+            if (mapInstance) {
+                renderContractorMarkersOnMap();
+            }
+        }
+
+        // ============================================================================
+        // VIEW 1: DASHBOARD, WORK LOG & SCRATCHPAD
+        // ============================================================================
+        function renderDashboard() {
+            const pendingTasks = state.tasks.filter(t => t.status !== 'done').length;
+            const completedTasks = state.tasks.filter(t => t.status === 'done').length;
+            document.getElementById('kpiPendingTasks').textContent = pendingTasks;
+            document.getElementById('kpiCompletedTasks').textContent = `เสร็จสิ้นแล้ว ${completedTasks} รายการ`;
+
+            const openActions = state.meetings.reduce((acc, m) => acc + (m.actionItems || []).filter(a => !a.done).length, 0);
+            document.getElementById('kpiTotalMeetings').textContent = state.meetings.length;
+            document.getElementById('kpiOpenActionItems').textContent = `มติที่ต้องติดตาม ${openActions} ข้อ`;
+
+            const todayIso = new Date().toISOString().split('T')[0];
+            const upcoming = state.appointments
+                .filter(a => !a.completed && a.date >= todayIso)
+                .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+            document.getElementById('kpiUpcomingEvents').textContent = upcoming.length;
+            document.getElementById('kpiNextEventLabel').textContent = upcoming.length > 0
+                ? `ถัดไป: ${upcoming[0].title} (${formatThaiDate(upcoming[0].date)})`
+                : 'ไม่มีนัดหมายค้างเร็วๆ นี้';
+
+            document.getElementById('kpiTotalContractors').textContent = state.contractors.length;
+
+            renderTaskList();
+            renderDashboardUpcoming(upcoming);
+            renderDashboardContractors();
+        }
+
+        function setTaskFilter(filter) {
+            currentTaskFilter = filter;
+            ['all', 'todo', 'doing', 'done'].forEach(k => {
+                const btn = document.getElementById(`taskFilter-${k}`);
+                btn.className = k === filter
+                    ? 'px-2.5 py-1 rounded-lg font-semibold bg-white text-navy-950'
+                    : 'px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white';
+            });
+            renderTaskList();
+        }
+
+        function handleAddTask(e) {
+            e.preventDefault();
+            const title = document.getElementById('taskTitleInput').value.trim();
+            const project = document.getElementById('taskProjectInput').value.trim();
+            const priority = document.getElementById('taskPriorityInput').value;
+            const dueDate = document.getElementById('taskDueInput').value;
+
+            if (!title) return;
+
+            state.tasks.unshift({
+                id: 'TSK-' + Date.now().toString(36).toUpperCase(),
+                title,
+                project: project || 'งานทั่วไป',
+                priority,
+                status: 'todo',
+                dueDate,
+                createdAt: new Date().toISOString()
+            });
+
+            document.getElementById('taskTitleInput').value = '';
+            document.getElementById('taskProjectInput').value = '';
+            saveWorkspaceState();
+            renderDashboard();
+            showToast('เพิ่มรายการงานใหม่เรียบร้อยแล้ว');
+        }
+
+        function cycleTaskStatus(taskId) {
+            const t = state.tasks.find(x => x.id === taskId);
+            if (!t) return;
+            const order = ['todo', 'doing', 'done'];
+            const nextIdx = (order.indexOf(t.status) + 1) % order.length;
+            t.status = order[nextIdx];
+            saveWorkspaceState();
+            renderDashboard();
+            lucide.createIcons();
+        }
+
+        function deleteTask(taskId) {
+            state.tasks = state.tasks.filter(x => x.id !== taskId);
+            saveWorkspaceState();
+            renderDashboard();
+            showToast('ลบรายการงานแล้ว');
+        }
+
+        function renderTaskList() {
+            const container = document.getElementById('dashboardTaskList');
+            const filtered = state.tasks.filter(t => currentTaskFilter === 'all' ? true : t.status === currentTaskFilter);
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="p-8 text-center text-xs text-slate-400">ไม่มีรายการงานในหมวดหมู่นี้</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map((t, idx) => {
+                const isNavyRow = idx % 2 === 1;
+                const statusBadge = t.status === 'done'
+                    ? `<span class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/20 text-emerald-600 border border-emerald-500/30">เสร็จสิ้น</span>`
+                    : t.status === 'doing'
+                        ? `<span class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-sky-500/20 text-sky-600 border border-sky-500/30">กำลังดำเนินการ</span>`
+                        : `<span class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/20 text-amber-600 border border-amber-500/30">รอดำเนินการ</span>`;
+
+                const prioBadge = t.priority === 'high'
+                    ? `<span class="text-[11px] font-bold text-rose-500">🔥 ด่วนมาก</span>`
+                    : t.priority === 'medium'
+                        ? `<span class="text-[11px] font-semibold text-blue-600">⚡ ปกติ</span>`
+                        : `<span class="text-[11px] text-slate-400">📌 ทั่วไป</span>`;
+
+                return `
+                    <div class="p-4 rounded-2xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                        isNavyRow
+                            ? 'bg-navy-900 text-white border-navy-800'
+                            : 'bg-white text-navy-950 border-slate-200 hover:border-navy-700'
+                    }">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-[11px] font-semibold px-2 py-0.5 rounded ${isNavyRow ? 'bg-white/10 text-sky-300' : 'bg-slate-100 text-navy-800'}">${t.project}</span>
+                                ${prioBadge}
+                                <span class="text-[11px] ${isNavyRow ? 'text-slate-300' : 'text-slate-500'}">กำหนด: ${formatThaiDate(t.dueDate)}</span>
+                            </div>
+                            <h5 class="font-bold text-sm ${t.status === 'done' ? 'line-through opacity-60' : ''}">${t.title}</h5>
+                        </div>
+                        <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+                            <button onclick="cycleTaskStatus('${t.id}')" title="คลิกเพื่อเปลี่ยนสถานะงาน">
+                                ${statusBadge}
+                            </button>
+                            <button onclick="deleteTask('${t.id}')" class="p-1.5 rounded-lg ${isNavyRow ? 'hover:bg-white/10 text-rose-300' : 'hover:bg-rose-50 text-rose-600'} transition">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        function saveScratchpad(val) {
+            state.scratchpad = val;
+            saveWorkspaceState();
+            const badge = document.getElementById('scratchpadSavedStatus');
+            badge.textContent = 'บันทึกแล้ว ✓';
+        }
+
+        function renderDashboardUpcoming(upcoming) {
+            const container = document.getElementById('dashboardUpcomingList');
+            if (upcoming.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 py-3 text-center">ยังไม่มีนัดหมายใหม่ คลิกที่เมนูปฏิทินเพื่อเพิ่มนัดหมาย</p>`;
+                return;
+            }
+            container.innerHTML = upcoming.slice(0, 4).map(a => `
+                <div onclick="switchView('calendar');selectCalendarDate('${a.date}');" class="p-3 rounded-2xl bg-slate-50 hover:bg-navy-900 hover:text-white transition cursor-pointer border border-slate-200 flex items-center justify-between gap-3 group">
+                    <div>
+                        <p class="font-bold text-xs sm:text-sm">${a.title}</p>
+                        <p class="text-[11px] text-slate-500 group-hover:text-sky-300">${formatThaiDate(a.date)} เวลา ${a.time || '-'} น. ${a.contractorName ? `• ${a.contractorName}` : ''}</p>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-white"></i>
+                </div>
+            `).join('');
+        }
+
+        function renderDashboardContractors() {
+            const container = document.getElementById('dashboardContractorList');
+            if (state.contractors.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 py-3 text-center">ยังไม่มีรายชื่อผู้รับเหมา</p>`;
+                return;
+            }
+            container.innerHTML = state.contractors.slice(0, 3).map(c => `
+                <div onclick="focusContractorOnMap('${c.id}')" class="p-3 rounded-2xl bg-navy-950/90 hover:bg-white hover:text-navy-950 text-white border border-white/10 transition cursor-pointer flex items-center justify-between gap-3 group">
+                    <div class="min-w-0">
+                        <p class="font-bold text-xs sm:text-sm truncate">${c.name}</p>
+                        <p class="text-[11px] text-sky-400 group-hover:text-blue-700 truncate">${c.trade} • โทร ${c.phone}</p>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 group-hover:bg-navy-900 group-hover:text-white text-[10px] font-semibold shrink-0">ดูพิกัด</span>
+                </div>
+            `).join('');
+        }
+
+        // ============================================================================
+        // VIEW 2: MEETING MINUTES & ACTION ITEMS
+        // ============================================================================
+        function addDraftActionItem() {
+            const input = document.getElementById('newActionItemInput');
+            const text = input.value.trim();
+            if (!text) return;
+            draftActionItems.push({ id: 'ACT-' + Date.now(), text, done: false });
+            input.value = '';
+            renderDraftActionItems();
+        }
+
+        function removeDraftActionItem(idx) {
+            draftActionItems.splice(idx, 1);
+            renderDraftActionItems();
+        }
+
+        function renderDraftActionItems() {
+            const list = document.getElementById('draftActionItemsList');
+            list.innerHTML = draftActionItems.map((item, idx) => `
+                <li class="flex items-center justify-between gap-2 bg-navy-900 px-3 py-1.5 rounded-xl border border-white/10">
+                    <span>• ${item.text}</span>
+                    <button type="button" onclick="removeDraftActionItem(${idx})" class="text-rose-400 hover:text-rose-300 text-xs">ลบ</button>
+                </li>
+            `).join('');
+        }
+
+        function handleSaveMeeting(e) {
+            e.preventDefault();
+            const editingId = document.getElementById('editingMeetingId').value;
+            const subject = document.getElementById('meetingSubject').value.trim();
+            const date = document.getElementById('meetingDate').value;
+            const time = document.getElementById('meetingTime').value;
+            const location = document.getElementById('meetingLocation').value.trim();
+            const attendees = document.getElementById('meetingAttendees').value.trim();
+            const summary = document.getElementById('meetingSummary').value.trim();
+
+            if (!subject || !summary) return;
+
+            if (editingId) {
+                const idx = state.meetings.findIndex(m => m.id === editingId);
+                if (idx > -1) {
+                    state.meetings[idx] = {
+                        ...state.meetings[idx],
+                        subject, date, time, location, attendees, summary,
+                        actionItems: [...draftActionItems]
+                    };
+                    showToast('อัปเดตบันทึกการประชุมเรียบร้อยแล้ว');
+                }
+            } else {
+                state.meetings.unshift({
+                    id: 'MTG-' + Date.now().toString(36).toUpperCase(),
+                    subject, date, time, location, attendees, summary,
+                    actionItems: [...draftActionItems],
+                    createdAt: new Date().toISOString()
+                });
+                showToast('บันทึกรายงานการประชุมสำเร็จ');
+            }
+
+            resetMeetingForm();
+            saveWorkspaceState();
+            renderAllViews();
+        }
+
+        function resetMeetingForm() {
+            document.getElementById('editingMeetingId').value = '';
+            document.getElementById('meetingSubject').value = '';
+            document.getElementById('meetingDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('meetingTime').value = '10:00';
+            document.getElementById('meetingLocation').value = '';
+            document.getElementById('meetingAttendees').value = '';
+            document.getElementById('meetingSummary').value = '';
+            draftActionItems = [];
+            renderDraftActionItems();
+            document.getElementById('meetingFormTitle').textContent = 'บันทึกการประชุมใหม่';
+            document.getElementById('meetingSubmitBtnText').textContent = 'บันทึกรายงานการประชุม';
+            document.getElementById('cancelMeetingEditBtn').classList.add('hidden');
+        }
+
+        function editMeeting(id) {
+            const m = state.meetings.find(x => x.id === id);
+            if (!m) return;
+            document.getElementById('editingMeetingId').value = m.id;
+            document.getElementById('meetingSubject').value = m.subject;
+            document.getElementById('meetingDate').value = m.date;
+            document.getElementById('meetingTime').value = m.time || '10:00';
+            document.getElementById('meetingLocation').value = m.location || '';
+            document.getElementById('meetingAttendees').value = m.attendees || '';
+            document.getElementById('meetingSummary').value = m.summary;
+            draftActionItems = [...(m.actionItems || [])];
+            renderDraftActionItems();
+
+            document.getElementById('meetingFormTitle').textContent = 'แก้ไขบันทึกการประชุม';
+            document.getElementById('meetingSubmitBtnText').textContent = 'บันทึกการแก้ไข';
+            document.getElementById('cancelMeetingEditBtn').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function deleteMeeting(id) {
+            if (!confirm('ยืนยันการลบบันทึกการประชุมนี้หรือไม่?')) return;
+            state.meetings = state.meetings.filter(m => m.id !== id);
+            saveWorkspaceState();
+            renderAllViews();
+            showToast('ลบบันทึกการประชุมแล้ว');
+        }
+
+        function toggleMeetingActionItem(meetingId, actionIdx) {
+            const m = state.meetings.find(x => x.id === meetingId);
+            if (!m || !m.actionItems[actionIdx]) return;
+            m.actionItems[actionIdx].done = !m.actionItems[actionIdx].done;
+            saveWorkspaceState();
+            renderAllViews();
+        }
+
+        function convertActionItemToTask(meetingId, actionIdx) {
+            const m = state.meetings.find(x => x.id === meetingId);
+            if (!m || !m.actionItems[actionIdx]) return;
+            const act = m.actionItems[actionIdx];
+
+            state.tasks.unshift({
+                id: 'TSK-' + Date.now().toString(36).toUpperCase(),
+                title: act.text,
+                project: m.subject,
+                priority: 'high',
+                status: 'todo',
+                dueDate: m.date,
+                createdAt: new Date().toISOString()
+            });
+
+            saveWorkspaceState();
+            renderAllViews();
+            showToast('ส่งมติที่ประชุมไปยังรายการงาน (Work Log) เรียบร้อย');
+        }
+
+        function renderMeetingsList() {
+            const container = document.getElementById('meetingsListContainer');
+            const q = (document.getElementById('meetingSearchInput')?.value || '').toLowerCase().trim();
+
+            const filtered = state.meetings.filter(m => {
+                if (!q) return true;
+                return `${m.subject} ${m.location} ${m.attendees} ${m.summary}`.toLowerCase().includes(q);
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-navy-900/60 border border-white/10 rounded-3xl p-12 text-center space-y-2">
+                        <p class="text-sm font-bold text-white">ยังไม่มีบันทึกการประชุม</p>
+                        <p class="text-xs text-slate-400">กรอกฟอร์มด้านซ้ายเพื่อสร้างรายงานการประชุมและมติสั่งการ</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map((m, index) => {
+                const isWhite = index % 2 === 0;
+                const attendeesPills = (m.attendees || '')
+                    .split(',')
+                    .map(x => x.trim())
+                    .filter(Boolean)
+                    .map(name => `<span class="px-2 py-0.5 rounded-full text-[11px] font-medium ${isWhite ? 'bg-slate-100 text-navy-800' : 'bg-white/10 text-sky-300'}">${name}</span>`)
+                    .join('');
+
+                const actionsHtml = (m.actionItems || []).map((act, aIdx) => `
+                    <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl ${isWhite ? 'bg-slate-50 border border-slate-200' : 'bg-navy-950/90 border border-white/10'}">
+                        <label class="flex items-center gap-2.5 text-xs cursor-pointer flex-1">
+                            <input type="checkbox" ${act.done ? 'checked' : ''} onchange="toggleMeetingActionItem('${m.id}', ${aIdx})"
+                                class="rounded text-blue-600 focus:ring-0 w-4 h-4">
+                            <span class="${act.done ? 'line-through opacity-60' : 'font-medium'}">${act.text}</span>
+                        </label>
+                        <button onclick="convertActionItemToTask('${m.id}', ${aIdx})" title="ส่งเข้า Work Log"
+                            class="px-2 py-1 rounded-lg text-[10px] font-semibold ${isWhite ? 'bg-navy-900 text-white hover:bg-blue-700' : 'bg-sky-500/20 text-sky-300 hover:bg-sky-500/30'} transition">
+                            + ส่งเข้างาน
+                        </button>
+                    </div>
+                `).join('');
+
+                return `
+                    <div class="${isWhite ? 'bg-white text-navy-950 shadow-white-card border-slate-200' : 'bg-gradient-to-br from-navy-900 to-navy-850 text-white shadow-navy-glow border-white/10'} rounded-3xl p-6 border space-y-4">
+                        <div class="flex items-start justify-between gap-3 border-b ${isWhite ? 'border-slate-100' : 'border-white/10'} pb-3.5">
+                            <div>
+                                <div class="flex items-center gap-2 text-xs ${isWhite ? 'text-blue-700' : 'text-sky-400'} font-semibold">
+                                    <span>📅 ${formatThaiDate(m.date)} (${m.time || '-'} น.)</span>
+                                    ${m.location ? `<span>• 📍 ${m.location}</span>` : ''}
+                                </div>
+                                <h4 class="text-base sm:text-lg font-bold mt-1">${m.subject}</h4>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="editMeeting('${m.id}')" class="p-2 rounded-xl ${isWhite ? 'bg-slate-100 hover:bg-slate-200 text-navy-900' : 'bg-white/10 hover:bg-white/20 text-white'} transition">
+                                    <i data-lucide="pencil" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="deleteMeeting('${m.id}')" class="p-2 rounded-xl ${isWhite ? 'bg-rose-50 hover:bg-rose-100 text-rose-600' : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300'} transition">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        ${attendeesPills ? `<div class="flex items-center gap-1.5 flex-wrap"><span class="text-xs opacity-70 mr-1">ผู้เข้าร่วม:</span>${attendeesPills}</div>` : ''}
+
+                        <div class="text-xs sm:text-sm leading-relaxed whitespace-pre-line ${isWhite ? 'text-slate-700' : 'text-slate-200'}">${m.summary}</div>
+
+                        ${actionsHtml ? `
+                            <div class="space-y-2 pt-2">
+                                <h5 class="text-xs font-bold uppercase tracking-wider ${isWhite ? 'text-navy-700' : 'text-sky-400'}">มติที่ประชุม / งานที่ต้องติดตาม</h5>
+                                <div class="space-y-1.5">${actionsHtml}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        // ============================================================================
+        // VIEW 3: INTERACTIVE CALENDAR & FOLLOW-UPS
+        // ============================================================================
+        const THAI_MONTHS = [
+            'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+            'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+        ];
+
+        function changeCalendarMonth(delta) {
+            calCurrentMonth += delta;
+            if (calCurrentMonth > 11) {
+                calCurrentMonth = 0;
+                calCurrentYear++;
+            } else if (calCurrentMonth < 0) {
+                calCurrentMonth = 11;
+                calCurrentYear--;
+            }
+            renderCalendar();
+        }
+
+        function goToTodayCalendar() {
+            const now = new Date();
+            calCurrentYear = now.getFullYear();
+            calCurrentMonth = now.getMonth();
+            selectCalendarDate(now.toISOString().split('T')[0]);
+        }
+
+        function selectCalendarDate(dateStr) {
+            selectedCalendarDate = dateStr;
+            document.getElementById('apptDateInput').value = dateStr;
+            document.getElementById('selectedDateLabel').textContent = `วันที่เลือก: ${formatThaiDate(dateStr)}`;
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            document.getElementById('calendarMonthYearLabel').textContent = `${THAI_MONTHS[calCurrentMonth]} ${calCurrentYear + 543}`;
+
+            const firstDay = new Date(calCurrentYear, calCurrentMonth, 1).getDay();
+            const daysInMonth = new Date(calCurrentYear, calCurrentMonth + 1, 0).getDate();
+            const todayIso = new Date().toISOString().split('T')[0];
+
+            const grid = document.getElementById('calendarGrid');
+            let cellsHtml = '';
+
+            // Empty leading cells
+            for (let i = 0; i < firstDay; i++) {
+                cellsHtml += `<div class="min-h-[95px] bg-slate-50/70 p-2"></div>`;
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateIso = `${calCurrentYear}-${String(calCurrentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayAppts = state.appointments.filter(a => a.date === dateIso);
+                const isToday = dateIso === todayIso;
+                const isSelected = dateIso === selectedCalendarDate;
+
+                const pills = dayAppts.slice(0, 2).map(a => {
+                    const color = a.completed
+                        ? 'bg-emerald-100 text-emerald-800 line-through'
+                        : a.type === 'inspection'
+                            ? 'bg-navy-900 text-white'
+                            : a.type === 'payment'
+                                ? 'bg-amber-100 text-amber-900'
+                                : 'bg-sky-100 text-sky-900';
+                    return `<div class="text-[10px] px-1.5 py-0.5 rounded truncate font-medium ${color}">${a.time ? a.time + ' ' : ''}${a.title}</div>`;
+                }).join('');
+
+                const moreCount = dayAppts.length > 2 ? `<div class="text-[10px] font-bold text-blue-700">+ อีก ${dayAppts.length - 2} รายการ</div>` : '';
+
+                cellsHtml += `
+                    <div onclick="selectCalendarDate('${dateIso}')"
+                        class="min-h-[95px] p-2 cursor-pointer transition flex flex-col justify-between ${
+                            isSelected
+                                ? 'bg-sky-50 ring-2 ring-inset ring-navy-900'
+                                : 'bg-white hover:bg-slate-50'
+                        }">
+                        <div class="flex items-center justify-between">
+                            <span class="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${
+                                isToday ? 'bg-navy-900 text-white' : 'text-navy-950'
+                            }">${day}</span>
+                            ${dayAppts.length > 0 ? `<span class="w-2 h-2 rounded-full bg-sky-500"></span>` : ''}
+                        </div>
+                        <div class="space-y-1 mt-1">
+                            ${pills}
+                            ${moreCount}
+                        </div>
+                    </div>
+                `;
+            }
+
+            grid.innerHTML = cellsHtml;
+            renderSelectedDateAppointments();
+        }
+
+        function handleAddAppointment(e) {
+            e.preventDefault();
+            const title = document.getElementById('apptTitleInput').value.trim();
+            const date = document.getElementById('apptDateInput').value;
+            const time = document.getElementById('apptTimeInput').value;
+            const type = document.getElementById('apptTypeSelect').value;
+            const contractorId = document.getElementById('apptContractorSelect').value;
+            const note = document.getElementById('apptNoteInput').value.trim();
+
+            const contractorObj = state.contractors.find(c => c.id === contractorId);
+
+            state.appointments.push({
+                id: 'APT-' + Date.now().toString(36).toUpperCase(),
+                title,
+                date,
+                time,
+                type,
+                contractorId: contractorId || '',
+                contractorName: contractorObj ? contractorObj.name : '',
+                note,
+                completed: false
+            });
+
+            document.getElementById('apptTitleInput').value = '';
+            document.getElementById('apptNoteInput').value = '';
+            selectedCalendarDate = date;
+            saveWorkspaceState();
+            renderAllViews();
+            showToast('เพิ่มนัดหมายติดตามงานลงในปฏิทินแล้ว');
+        }
+
+        function toggleAppointmentComplete(id) {
+            const a = state.appointments.find(x => x.id === id);
+            if (!a) return;
+            a.completed = !a.completed;
+            saveWorkspaceState();
+            renderAllViews();
+        }
+
+        function deleteAppointment(id) {
+            state.appointments = state.appointments.filter(x => x.id !== id);
+            saveWorkspaceState();
+            renderAllViews();
+            showToast('ลบนัดหมายแล้ว');
+        }
+
+        function renderSelectedDateAppointments() {
+            const list = document.getElementById('selectedDateAppointmentsList');
+            const dayAppts = state.appointments
+                .filter(a => a.date === selectedCalendarDate)
+                .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+            document.getElementById('dayScheduleHeader').textContent = `นัดหมายวันที่ ${formatThaiDate(selectedCalendarDate)}`;
+            document.getElementById('dayScheduleCount').textContent = `${dayAppts.length} รายการ`;
+
+            if (dayAppts.length === 0) {
+                list.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">ยังไม่มีนัดหมายในวันนี้</div>`;
+                return;
+            }
+
+            list.innerHTML = dayAppts.map(a => `
+                <div class="p-3.5 rounded-2xl border ${a.completed ? 'bg-emerald-50/60 border-emerald-200' : 'bg-slate-50 border-slate-200'} space-y-1.5">
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <span class="text-xs font-mono font-bold text-blue-700">${a.time || 'ตลอดวัน'} น.</span>
+                            <h5 class="font-bold text-sm text-navy-950 ${a.completed ? 'line-through opacity-60' : ''}">${a.title}</h5>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button onclick="toggleAppointmentComplete('${a.id}')" class="px-2 py-1 rounded-lg text-[10px] font-bold ${a.completed ? 'bg-emerald-600 text-white' : 'bg-navy-900 text-white'}">
+                                ${a.completed ? 'เสร็จแล้ว' : 'เช็คชื่อ'}
+                            </button>
+                            <button onclick="deleteAppointment('${a.id}')" class="p-1 text-rose-500 hover:bg-rose-50 rounded-lg">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+                    ${a.contractorName ? `<p class="text-xs font-semibold text-navy-700">👷 ผู้รับเหมา: ${a.contractorName}</p>` : ''}
+                    ${a.note ? `<p class="text-xs text-slate-600">${a.note}</p>` : ''}
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // ============================================================================
+        // VIEW 4: GOOGLE MAPS & CONTRACTOR DIRECTORY
+        // ============================================================================
+        let googleTileLayer = null;
+        let currentGoogleMapMode = 'm'; // 'm' = Road, 'y' = Satellite Hybrid, 'p' = Terrain, 'embed' = Google Maps Embed Iframe
+
+        function initContractorMap() {
+            if (mapInstance) return;
+            const defaultLat = Number(document.getElementById('contractorLat').value) || 13.7563;
+            const defaultLng = Number(document.getElementById('contractorLng').value) || 100.5018;
+
+            mapInstance = L.map('contractorMap').setView([defaultLat, defaultLng], 12);
+
+            // Use official Google Maps Tiles (Road Map by default, Thai language)
+            googleTileLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=th&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                attribution: '© Google Maps'
+            }).addTo(mapInstance);
+
+            contractorMarkersLayer = L.layerGroup().addTo(mapInstance);
+
+            // Draft pin marker when clicking on Google Map
+            draftMarker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(mapInstance);
+            draftMarker.bindPopup('<b>จุดปักหมุด Google Maps ที่เลือก</b><br>ลากหมุดหรือคลิกบนแผนที่เพื่อเปลี่ยนพิกัด');
+
+            draftMarker.on('dragend', function (e) {
+                const pos = e.target.getLatLng();
+                setPickedCoordinates(pos.lat, pos.lng);
+            });
+
+            mapInstance.on('click', function (e) {
+                setPickedCoordinates(e.latlng.lat, e.latlng.lng);
+            });
+
+            renderContractorMarkersOnMap();
+        }
+
+        function setGoogleMapLayer(mode) {
+            currentGoogleMapMode = mode;
+            ['m', 'y', 'p', 'embed'].forEach(k => {
+                const btn = document.getElementById(`gmapLayer-${k}`);
+                if (!btn) return;
+                btn.className = k === mode
+                    ? 'px-2.5 py-1 rounded-lg bg-navy-900 text-white transition'
+                    : 'px-2.5 py-1 rounded-lg text-slate-600 hover:text-navy-950 transition';
+            });
+
+            const mapDiv = document.getElementById('contractorMap');
+            const embedIframe = document.getElementById('googleMapEmbedIframe');
+            const lat = document.getElementById('contractorLat').value || 13.7563;
+            const lng = document.getElementById('contractorLng').value || 100.5018;
+
+            if (mode === 'embed') {
+                mapDiv.classList.add('hidden');
+                embedIframe.classList.remove('hidden');
+                const query = document.getElementById('mapPlaceSearchInput').value.trim() || `${lat},${lng}`;
+                embedIframe.src = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&hl=th&z=15&output=embed`;
+                return;
+            }
+
+            embedIframe.classList.add('hidden');
+            mapDiv.classList.remove('hidden');
+
+            initContractorMap();
+            if (googleTileLayer) {
+                mapInstance.removeLayer(googleTileLayer);
+            }
+            googleTileLayer = L.tileLayer(`https://mt1.google.com/vt/lyrs=${mode}&hl=th&x={x}&y={y}&z={z}`, {
+                maxZoom: 20,
+                attribution: '© Google Maps'
+            }).addTo(mapInstance);
+
+            setTimeout(() => mapInstance.invalidateSize(), 80);
+        }
+
+        function setPickedCoordinates(lat, lng, labelQuery = '') {
+            const fLat = Number(lat).toFixed(5);
+            const fLng = Number(lng).toFixed(5);
+            document.getElementById('contractorLat').value = fLat;
+            document.getElementById('contractorLng').value = fLng;
+            document.getElementById('pickedCoordBadge').textContent = `${fLat}, ${fLng}`;
+
+            const extLink = document.getElementById('openInGoogleMapsExternal');
+            if (extLink) {
+                extLink.href = `https://www.google.com/maps?q=${fLat},${fLng}`;
+            }
+
+            if (draftMarker) {
+                draftMarker.setLatLng([fLat, fLng]);
+            }
+
+            const embedIframe = document.getElementById('googleMapEmbedIframe');
+            if (embedIframe && currentGoogleMapMode === 'embed') {
+                const q = labelQuery || `${fLat},${fLng}`;
+                embedIframe.src = `https://maps.google.com/maps?q=${encodeURIComponent(q)}&hl=th&z=16&output=embed`;
+            }
+        }
+
+        function updateDraftMarkerFromInputs() {
+            const lat = parseFloat(document.getElementById('contractorLat').value);
+            const lng = parseFloat(document.getElementById('contractorLng').value);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                setPickedCoordinates(lat, lng);
+                if (mapInstance) {
+                    mapInstance.panTo([lat, lng]);
+                }
+            }
+        }
+
+        async function searchPlaceOnMap() {
+            const query = document.getElementById('mapPlaceSearchInput').value.trim();
+            if (!query) return;
+
+            // Check if user pasted a Google Maps URL containing @lat,lng or q=lat,lng
+            const urlCoordMatch = query.match(/(@|q=)(-?\d+\.\d+),(-?\d+\.\d+)/);
+            if (urlCoordMatch) {
+                const lat = parseFloat(urlCoordMatch[2]);
+                const lng = parseFloat(urlCoordMatch[3]);
+                initContractorMap();
+                setPickedCoordinates(lat, lng);
+                mapInstance.setView([lat, lng], 16);
+                showToast('ดึงพิกัดจากลิงก์ Google Maps สำเร็จ');
+                return;
+            }
+
+            // Update Google Maps Embed iframe immediately if in embed mode
+            const embedIframe = document.getElementById('googleMapEmbedIframe');
+            if (embedIframe && currentGoogleMapMode === 'embed') {
+                embedIframe.src = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&hl=th&z=15&output=embed`;
+            }
+
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lng = parseFloat(data[0].lon);
+                    initContractorMap();
+                    setPickedCoordinates(lat, lng, query);
+                    mapInstance.setView([lat, lng], 16);
+                    if (!document.getElementById('contractorAddress').value.trim()) {
+                        document.getElementById('contractorAddress').value = data[0].display_name;
+                    }
+                    showToast(`พบตำแหน่งบน Google Maps: ${data[0].display_name.slice(0, 45)}...`);
+                } else {
+                    // Fallback to Google Maps Embed view for any Google-specific place name
+                    setGoogleMapLayer('embed');
+                    showToast('แสดงผลการค้นหาด้วย Google Maps Embed');
+                }
+            } catch (err) {
+                setGoogleMapLayer('embed');
+                showToast('แสดงตำแหน่งบน Google Maps Embed');
+            }
+        }
+
+        function locateMyCurrentPosition() {
+            if (!navigator.geolocation) {
+                showToast('เบราว์เซอร์ไม่รองรับการดึงพิกัด GPS', 'error');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    initContractorMap();
+                    setPickedCoordinates(pos.coords.latitude, pos.coords.longitude);
+                    mapInstance.setView([pos.coords.latitude, pos.coords.longitude], 16);
+                    showToast('ดึงตำแหน่ง GPS ปัจจุบันบน Google Maps สำเร็จ');
+                },
+                () => showToast('ไม่สามารถเข้าถึงตำแหน่งปัจจุบันได้', 'error')
+            );
+        }
+
+        function renderContractorMarkersOnMap() {
+            if (!mapInstance || !contractorMarkersLayer) return;
+            contractorMarkersLayer.clearLayers();
+
+            state.contractors.forEach((c, index) => {
+                const lat = parseFloat(c.lat);
+                const lng = parseFloat(c.lng);
+                if (isNaN(lat) || isNaN(lng)) return;
+
+                const icon = L.divIcon({
+                    className: '',
+                    html: `<div class="custom-pin"><span>${index + 1}</span></div>`,
+                    iconSize: [34, 34],
+                    iconAnchor: [17, 34],
+                    popupAnchor: [0, -34]
+                });
+
+                const marker = L.marker([lat, lng], { icon });
+                marker.bindPopup(`
+                    <div style="min-width:210px">
+                        <div style="font-weight:700;font-size:14px;color:#0A1428">${c.name}</div>
+                        <div style="font-size:12px;color:#0284C7;font-weight:600">${c.trade}</div>
+                        <div style="font-size:12px;margin-top:4px;color:#334155">📍 ${c.address}</div>
+                        <div style="font-size:12px;margin-top:4px;font-weight:600">📞 โทร: ${c.phone}</div>
+                        <div style="margin-top:8px">
+                            <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank"
+                               style="display:inline-block;padding:4px 10px;background:#0A1428;color:#FFF;border-radius:8px;font-size:11px;text-decoration:none;">
+                               เปิดใน Google Maps ↗
+                            </a>
+                        </div>
+                    </div>
+                `);
+                contractorMarkersLayer.addLayer(marker);
+            });
+        }
+
+        function fitAllContractorMarkers() {
+            if (currentGoogleMapMode === 'embed') {
+                setGoogleMapLayer('m');
+            }
+            if (!mapInstance || state.contractors.length === 0) return;
+            const coords = state.contractors
+                .map(c => [parseFloat(c.lat), parseFloat(c.lng)])
+                .filter(pair => !isNaN(pair[0]) && !isNaN(pair[1]));
+            if (coords.length > 0) {
+                mapInstance.fitBounds(coords, { padding: [40, 40] });
+            }
+        }
+
+        function focusContractorOnMap(contractorId) {
+            const c = state.contractors.find(x => x.id === contractorId);
+            if (!c) return;
+            switchView('contractors');
+            setTimeout(() => {
+                initContractorMap();
+                const lat = parseFloat(c.lat);
+                const lng = parseFloat(c.lng);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    mapInstance.setView([lat, lng], 16);
+                    setPickedCoordinates(lat, lng, `${c.name} ${c.address}`);
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 150);
+        }
+
+        function populateContractorDropdown() {
+            const select = document.getElementById('apptContractorSelect');
+            if (!select) return;
+            select.innerHTML = `<option value="">-- ไม่ระบุ --</option>` +
+                state.contractors.map(c => `<option value="${c.id}">${c.name} (${c.trade})</option>`).join('');
+        }
+
+        function handleSaveContractor(e) {
+            e.preventDefault();
+            const editingId = document.getElementById('editingContractorId').value;
+            const name = document.getElementById('contractorName').value.trim();
+            const trade = document.getElementById('contractorTrade').value;
+            const phone = document.getElementById('contractorPhone').value.trim();
+            const line = document.getElementById('contractorLine').value.trim();
+            const address = document.getElementById('contractorAddress').value.trim();
+            const lat = parseFloat(document.getElementById('contractorLat').value) || 13.7563;
+            const lng = parseFloat(document.getElementById('contractorLng').value) || 100.5018;
+            const budget = Number(document.getElementById('contractorBudget').value) || 0;
+            const rating = Number(document.getElementById('contractorRating').value) || 4;
+            const notes = document.getElementById('contractorNotes').value.trim();
+
+            if (!name || !address) return;
+
+            if (editingId) {
+                const idx = state.contractors.findIndex(c => c.id === editingId);
+                if (idx > -1) {
+                    state.contractors[idx] = {
+                        ...state.contractors[idx],
+                        name, trade, phone, line, address, lat, lng, budget, rating, notes
+                    };
+                    showToast(`อัปเดตข้อมูลผู้รับเหมา "${name}" เรียบร้อยแล้ว`);
+                }
+            } else {
+                state.contractors.unshift({
+                    id: 'CTR-' + Date.now().toString(36).toUpperCase(),
+                    name, trade, phone, line, address, lat, lng, budget, rating, notes,
+                    createdAt: new Date().toISOString()
+                });
+                showToast(`บันทึกและปักหมุด "${name}" บน Google Maps สำเร็จ`);
+            }
+
+            resetContractorForm();
+            saveWorkspaceState();
+            renderAllViews();
+        }
+
+        function resetContractorForm() {
+            document.getElementById('editingContractorId').value = '';
+            document.getElementById('contractorName').value = '';
+            document.getElementById('contractorPhone').value = '';
+            document.getElementById('contractorLine').value = '';
+            document.getElementById('contractorAddress').value = '';
+            document.getElementById('contractorBudget').value = '';
+            document.getElementById('contractorNotes').value = '';
+            document.getElementById('contractorFormTitle').textContent = 'บันทึกข้อมูลและตำแหน่งผู้รับเหมา';
+            document.getElementById('contractorSubmitBtnText').textContent = 'บันทึกข้อมูลและปักหมุดผู้รับเหมา';
+            document.getElementById('cancelContractorEditBtn').classList.add('hidden');
+        }
+
+        function editContractor(id) {
+            const c = state.contractors.find(x => x.id === id);
+            if (!c) return;
+            document.getElementById('editingContractorId').value = c.id;
+            document.getElementById('contractorName').value = c.name;
+            document.getElementById('contractorTrade').value = c.trade;
+            document.getElementById('contractorPhone').value = c.phone;
+            document.getElementById('contractorLine').value = c.line || '';
+            document.getElementById('contractorAddress').value = c.address;
+            document.getElementById('contractorLat').value = c.lat;
+            document.getElementById('contractorLng').value = c.lng;
+            document.getElementById('contractorBudget').value = c.budget || '';
+            document.getElementById('contractorRating').value = c.rating || 4;
+            document.getElementById('contractorNotes').value = c.notes || '';
+
+            document.getElementById('contractorFormTitle').textContent = `แก้ไขผู้รับเหมา: ${c.name}`;
+            document.getElementById('contractorSubmitBtnText').textContent = 'บันทึกการแก้ไขผู้รับเหมา';
+            document.getElementById('cancelContractorEditBtn').classList.remove('hidden');
+
+            focusContractorOnMap(c.id);
+        }
+
+        function deleteContractor(id) {
+            if (!confirm('ยืนยันการลบข้อมูลผู้รับเหมารายนี้หรือไม่?')) return;
+            state.contractors = state.contractors.filter(c => c.id !== id);
+            saveWorkspaceState();
+            renderAllViews();
+            showToast('ลบข้อมูลผู้รับเหมาแล้ว');
+        }
+
+        function renderContractorsList() {
+            const container = document.getElementById('contractorsGridContainer');
+            const q = (document.getElementById('contractorSearchInput')?.value || '').toLowerCase().trim();
+
+            const filtered = state.contractors.filter(c => {
+                if (!q) return true;
+                return `${c.name} ${c.trade} ${c.phone} ${c.address} ${c.notes}`.toLowerCase().includes(q);
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="col-span-full bg-navy-900/60 border border-white/10 rounded-3xl p-10 text-center text-xs text-slate-400">ไม่พบข้อมูลผู้รับเหมาที่ค้นหา</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map((c, idx) => {
+                const isWhite = idx % 2 === 0;
+                const stars = '⭐'.repeat(Number(c.rating) || 4);
+
+                return `
+                    <div class="${isWhite ? 'bg-white text-navy-950 shadow-white-card border-slate-200' : 'bg-gradient-to-br from-navy-900 to-navy-850 text-white shadow-navy-glow border-white/10'} rounded-3xl p-5 border flex flex-col justify-between space-y-4">
+                        <div class="space-y-2.5">
+                            <div class="flex items-start justify-between gap-2">
+                                <span class="px-2.5 py-1 rounded-full text-[11px] font-bold ${isWhite ? 'bg-navy-900 text-sky-300' : 'bg-sky-500/20 text-sky-300 border border-sky-400/30'}">
+                                    #${idx + 1} • ${c.trade}
+                                </span>
+                                <span class="text-xs">${stars}</span>
+                            </div>
+
+                            <h4 class="text-base font-bold">${c.name}</h4>
+
+                            <div class="space-y-1 text-xs ${isWhite ? 'text-slate-600' : 'text-slate-300'}">
+                                <p class="flex items-start gap-1.5"><i data-lucide="map-pin" class="w-4 h-4 shrink-0 text-emerald-500 mt-0.5"></i> <span>${c.address}</span></p>
+                                <p class="flex items-center gap-1.5"><i data-lucide="phone" class="w-3.5 h-3.5 shrink-0 text-sky-500"></i> <strong>${c.phone}</strong> ${c.line ? `• LINE: ${c.line}` : ''}</p>
+                                ${c.budget ? `<p class="flex items-center gap-1.5"><i data-lucide="wallet" class="w-3.5 h-3.5 shrink-0 text-amber-500"></i> วงเงินสัญญา: <strong class="font-mono">${formatCurrency(c.budget)}</strong></p>` : ''}
+                                ${c.notes ? `<p class="text-[11px] italic pt-1 opacity-85">"${c.notes}"</p>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-t ${isWhite ? 'border-slate-100' : 'border-white/10'} flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="focusContractorOnMap('${c.id}')" class="px-3 py-1.5 rounded-xl text-xs font-semibold ${isWhite ? 'bg-navy-900 text-white hover:bg-blue-700' : 'bg-white text-navy-950 hover:bg-sky-300'} transition flex items-center gap-1">
+                                    <i data-lucide="locate" class="w-3.5 h-3.5"></i>
+                                    ดูบน Google Maps
+                                </button>
+                                <a href="https://www.google.com/maps?q=${c.lat},${c.lng}" target="_blank"
+                                    class="px-2.5 py-1.5 rounded-xl text-xs font-semibold ${isWhite ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'} transition">
+                                    นำทาง ↗
+                                </a>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <button onclick="editContractor('${c.id}')" class="p-1.5 rounded-lg ${isWhite ? 'hover:bg-slate-100 text-navy-800' : 'hover:bg-white/10 text-white'}">
+                                    <i data-lucide="pencil" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="deleteContractor('${c.id}')" class="p-1.5 rounded-lg ${isWhite ? 'hover:bg-rose-50 text-rose-600' : 'hover:bg-rose-500/20 text-rose-300'}">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        // ============================================================================
+        // BUILT-IN TOOLS: GLOBAL SEARCH
+        // ============================================================================
+        function handleGlobalSearch(query) {
+            const box = document.getElementById('globalSearchDropdown');
+            const q = query.toLowerCase().trim();
+            if (!q) {
+                box.classList.add('hidden');
+                return;
+            }
+
+            const matchedTasks = state.tasks.filter(t => `${t.title} ${t.project}`.toLowerCase().includes(q));
+            const matchedMeetings = state.meetings.filter(m => `${m.subject} ${m.summary}`.toLowerCase().includes(q));
+            const matchedContractors = state.contractors.filter(c => `${c.name} ${c.trade} ${c.address}`.toLowerCase().includes(q));
+
+            box.classList.remove('hidden');
+            box.innerHTML = `
+                <div class="flex items-center justify-between mb-2 pb-2 border-b border-slate-200">
+                    <span class="text-xs font-bold text-navy-900">ผลการค้นหาด่วนสำหรับ "${query}"</span>
+                    <button onclick="document.getElementById('globalSearchDropdown').classList.add('hidden')" class="text-xs text-rose-600 font-semibold">ปิด ✕</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <div>
+                        <p class="font-bold text-blue-700 mb-1">งาน (${matchedTasks.length})</p>
+                        ${matchedTasks.slice(0, 3).map(t => `<div onclick="switchView('dashboard');document.getElementById('globalSearchDropdown').classList.add('hidden')" class="p-1.5 hover:bg-slate-100 rounded cursor-pointer truncate">• ${t.title}</div>`).join('') || '<p class="text-slate-400">ไม่พบ</p>'}
+                    </div>
+                    <div>
+                        <p class="font-bold text-blue-700 mb-1">การประชุม (${matchedMeetings.length})</p>
+                        ${matchedMeetings.slice(0, 3).map(m => `<div onclick="switchView('meetings');document.getElementById('globalSearchDropdown').classList.add('hidden')" class="p-1.5 hover:bg-slate-100 rounded cursor-pointer truncate">• ${m.subject}</div>`).join('') || '<p class="text-slate-400">ไม่พบ</p>'}
+                    </div>
+                    <div>
+                        <p class="font-bold text-blue-700 mb-1">ผู้รับเหมา (${matchedContractors.length})</p>
+                        ${matchedContractors.slice(0, 3).map(c => `<div onclick="focusContractorOnMap('${c.id}');document.getElementById('globalSearchDropdown').classList.add('hidden')" class="p-1.5 hover:bg-slate-100 rounded cursor-pointer truncate">• ${c.name} (${c.trade})</div>`).join('') || '<p class="text-slate-400">ไม่พบ</p>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        function openLoanAppIfExist() {
+            window.open('loan-manager.html', '_blank');
+        }
+
+        // ============================================================================
+        // DEMO DATA & BACKUP EXPORT / IMPORT
+        // ============================================================================
+        function seedInitialWorkspaceData(notify = true) {
+            const today = new Date();
+            const todayIso = today.toISOString().split('T')[0];
+
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 2);
+            const tomorrowIso = tomorrow.toISOString().split('T')[0];
+
+            state = {
+                scratchpad: '• โทรเช็คคิวรถปูน CPAC ก่อน 11:00 น.\n• เตรียมเอกสารเบิกงวดงานที่ 3 โครงการบางนา\n• ตรวจสอบใบเสนอราคาผู้รับเหมาเดินสายไฟเพิ่มเติม',
+                tasks: [
+                    {
+                        id: 'TSK-101',
+                        title: 'ตรวจรับงานเทคอนกรีตพื้นชั้น 2 และเช็คระดับน้ำ',
+                        project: 'โครงการอาคารสำนักงาน บางนา',
+                        priority: 'high',
+                        status: 'doing',
+                        dueDate: todayIso,
+                        createdAt: new Date().toISOString()
+                    },
+                    {
+                        id: 'TSK-102',
+                        title: 'สรุปเปรียบเทียบราคาผู้รับเหมาติดตั้งระบบแอร์ VRV',
+                        project: 'คลังสินค้า สุวรรณภูมิ',
+                        priority: 'medium',
+                        status: 'todo',
+                        dueDate: tomorrowIso,
+                        createdAt: new Date().toISOString()
+                    },
+                    {
+                        id: 'TSK-103',
+                        title: 'อนุมัติแบบ Shop Drawing งานโครงหลังคาเหล็ก',
+                        project: 'โครงการอาคารสำนักงาน บางนา',
+                        priority: 'high',
+                        status: 'done',
+                        dueDate: todayIso,
+                        createdAt: new Date().toISOString()
+                    }
+                ],
+                meetings: [
+                    {
+                        id: 'MTG-201',
+                        subject: 'ประชุมติดตามความคืบหน้าประจำสัปดาห์ (Weekly Site Progress)',
+                        date: todayIso,
+                        time: '10:00',
+                        location: 'ห้องประชุมหน้าไซต์งาน บางนา กม.8',
+                        attendees: 'คุณศุภชัย, ช่างพงษ์ (โครงสร้าง), ช่างวิทย์ (ระบบไฟ), วิศวกรนนท์',
+                        summary: '1. งานโครงสร้างเสาและคานชั้น 2 เสร็จสมบูรณ์ 100% ตามแผน\n2. กำหนดเข้าเดินท่อร้อยสายไฟ EMT สัปดาห์หน้า โดยให้ทีมช่างไฟประสานงานจุดเจาะ 슬แลบกับทีมโครงสร้างล่วงหน้า\n3. เน้นย้ำมาตรการความปลอดภัยและหมวกนิรภัยทุกคนก่อนเข้าพื้นที่',
+                        actionItems: [
+                            { id: 'A1', text: 'ช่างพงษ์ส่งแผนเทคอนกรีตชั้น 3 ภายในวันศุกร์นี้', done: false },
+                            { id: 'A2', text: 'ช่างวิทย์ส่งรายการวัสดุท่อไฟเพื่อขออนุมัติสั่งซื้อ', done: true }
+                        ]
+                    }
+                ],
+                appointments: [
+                    {
+                        id: 'APT-301',
+                        title: 'นัดตรวจรับงานโครงสร้างเหล็กและจ่ายค่างวดที่ 2',
+                        date: todayIso,
+                        time: '14:00',
+                        type: 'inspection',
+                        contractorId: 'CTR-401',
+                        contractorName: 'หจก. พงษ์ศักดิ์ โครงสร้างและการช่าง',
+                        note: 'เตรียมแบบขยายรอยเชื่อมและเอกสารใบสำคัญรับเงิน',
+                        completed: false
+                    },
+                    {
+                        id: 'APT-302',
+                        title: 'นัดดูหน้างานติดตั้งตู้ MDB และเดินสายเมนไฟฟ้า',
+                        date: tomorrowIso,
+                        time: '10:30',
+                        type: 'followup',
+                        contractorId: 'CTR-402',
+                        contractorName: 'ทีมช่างวิทย์ เอ็นจิเนียริ่ง แอนด์ อีเล็คทริค',
+                        note: 'ตรวจสอบตำแหน่งห้องเครื่องไฟฟ้าชั้นล่าง',
+                        completed: false
+                    }
+                ],
+                contractors: [
+                    {
+                        id: 'CTR-401',
+                        name: 'หจก. พงษ์ศักดิ์ โครงสร้างและการช่าง (ช่างพงษ์)',
+                        trade: 'งานโครงสร้าง/โยธา',
+                        phone: '081-789-4512',
+                        line: '@pongsak_civil',
+                        address: '88/14 ถ.บางนา-ตราด กม.8 ต.บางแก้ว อ.บางพลี จ.สมุทรปราการ',
+                        lat: 13.6515,
+                        lng: 100.6782,
+                        budget: 850000,
+                        rating: 5,
+                        notes: 'รับเหมางานฐานราก โครงสร้างคอนกรีตเสริมเหล็ก และโครงหลังคา มีทีมงานประจำ 18 คน'
+                    },
+                    {
+                        id: 'CTR-402',
+                        name: 'ทีมช่างวิทย์ เอ็นจิเนียริ่ง แอนด์ อีเล็คทริค',
+                        trade: 'งานระบบไฟฟ้า/สื่อสาร',
+                        phone: '089-223-6790',
+                        line: 'wit_electric99',
+                        address: '124 ถ.พระราม 9 แขวงห้วยขวาง เขตห้วยขวาง กรุงเทพมหานคร',
+                        lat: 13.7582,
+                        lng: 100.5695,
+                        budget: 420000,
+                        rating: 5,
+                        notes: 'เชี่ยวชาญงานตู้ MDB, เดินท่อ EMT/IMC, ระบบกล้องวงจรปิดและ LAN อาคาร'
+                    },
+                    {
+                        id: 'CTR-403',
+                        name: 'สยามโมเดิร์น เดคคอร์ (ช่างเอก ตกแต่งภายใน)',
+                        trade: 'งานสถาปัตย์/ตกแต่งภายใน',
+                        phone: '086-554-1120',
+                        line: 'aek_interior',
+                        address: '55/9 ถ.ราชพฤกษ์ ต.บางรักน้อย อ.เมืองนนทบุรี จ.นนทบุรี',
+                        lat: 13.8624,
+                        lng: 100.4472,
+                        budget: 680000,
+                        rating: 4,
+                        notes: 'งานฝ้าฉาบเรียบ กั้นผนังเบา ปูกระเบื้อง และงานบิลท์อินเฟอร์นิเจอร์'
+                    }
+                ]
+            };
+
+            saveWorkspaceState();
+            if (notify) {
+                document.getElementById('quickScratchpad').value = state.scratchpad;
+                renderAllViews();
+                showToast('รีเซ็ตข้อมูลตัวอย่างครบทุกหน้าเรียบร้อยแล้ว');
+            }
+        }
+
+        function resetDemoWorkspace() {
+            if (!confirm('ต้องการโหลดข้อมูลตัวอย่างใหม่ทั้งหมดหรือไม่?')) return;
+            seedInitialWorkspaceData(true);
+        }
+
+        function exportWorkspaceJSON() {
+            const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `workflow-navy-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('สำรองข้อมูลทั้งหมดเป็นไฟล์ JSON สำเร็จ');
+        }
+
+        function importWorkspaceJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported && Array.isArray(imported.tasks)) {
+                        state = imported;
+                        saveWorkspaceState();
+                        renderAllViews();
+                        showToast('นำเข้าข้อมูลสำเร็จ');
+                    } else {
+                        showToast('ไฟล์ JSON ไม่ถูกต้อง', 'error');
+                    }
+                } catch (err) {
+                    showToast('ไม่สามารถอ่านไฟล์ได้', 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const isError = type === 'error';
+            toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl border text-xs font-semibold transition-all duration-300 ${
+                isError ? 'bg-rose-950 text-rose-100 border-rose-500/40' : 'bg-navy-900 text-white border-sky-400/40'
+            }`;
+            toast.innerHTML = `
+                <i data-lucide="${isError ? 'alert-circle' : 'check-circle-2'}" class="w-4 h-4 ${isError ? 'text-rose-400' : 'text-sky-400'}"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
